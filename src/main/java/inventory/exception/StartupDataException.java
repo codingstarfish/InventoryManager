@@ -1,4 +1,4 @@
 package inventory.exception;
 
-public class StartupDataException {
+public class StartupDataException extends RuntimeException{
 }

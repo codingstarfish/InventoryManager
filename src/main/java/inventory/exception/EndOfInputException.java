@@ -1,4 +1,4 @@
 package inventory.exception;
 
-public class EndOfInputException {
+public class EndOfInputException extends RuntimeException{
 }

@@ -1,4 +1,4 @@
 package inventory.exception;
 
-public class SaveFailureException {
+public class SaveFailureException extends RuntimeException{
 }

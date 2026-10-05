@@ -1,4 +1,8 @@
 package inventory.entity;
 
-public record PhysicalItem() {
+public record PhysicalItem(
+        String logicalCode,
+        int suffix,
+        boolean sold
+) {
 }

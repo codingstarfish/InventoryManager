@@ -1,4 +1,4 @@
 package inventory.exception;
 
-public class UserInputException {
+public class UserInputException extends RuntimeException{
 }

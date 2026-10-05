@@ -37,3 +37,12 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+
+.idea/
+out/
+*.class
+target/
+*.iml
+/InventoryManager.jar
+/data/*.txt

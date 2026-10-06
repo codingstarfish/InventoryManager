@@ -1,5 +1,7 @@
 package inventory.database;
 
+import java.util.ArrayList;
+import java.util.List;
 import inventory.validation.FileIntegrityValidator;
 import inventory.dto.InventorySnapshot;
 import inventory.exception.StartupDataException;
@@ -41,7 +43,18 @@ public class StartupLoader {
      * @throws StartupDataException 구체적인 생성·접근·문법·의미 오류 하나; 기존 파일 미변경
      */
     public InventorySnapshot load() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        access.ensureDataFiles();
+        access.checkReadableWritable();
+        List<String> logicalLines = loader.readStrictLines(access.logicalPath());
+        List<String> physicalLines = loader.readStrictLines(access.physicalPath());
+        List<RawLogicalRow> logicalRows = new ArrayList<>();
+        List<RawPhysicalRow> physicalRows = new ArrayList<>();
+        for (int i = 0; i < logicalLines.size(); i++) {
+            logicalRows.add(parser.parseLogicalSyntax(logicalLines.get(i), i + 1));
+        }
+        for (int i = 0; i < physicalLines.size(); i++) {
+            physicalRows.add(parser.parsePhysicalSyntax(physicalLines.get(i), i + 1));
+        }
+        return validator.validateAndBuild(new ParsedFiles(logicalRows, physicalRows));
     }
 }

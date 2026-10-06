@@ -1,5 +1,6 @@
 package inventory.dto;
 
+import java.util.Objects;
 import inventory.entity.LogicalItem;
 
 /**
@@ -17,7 +18,6 @@ public record RegisterResult(
      * @throws NullPointerException 필드가 null
      */
     public RegisterResult {
-        // TODO: 위 생성자 검증을 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(item, "item");
     }
 }

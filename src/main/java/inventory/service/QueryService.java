@@ -1,5 +1,8 @@
 package inventory.service;
 
+import java.util.Map;
+import inventory.literal.ErrorCode;
+import inventory.entity.LogicalItem;
 import inventory.repository.LogicalItemRepository;
 import inventory.repository.PhysicalItemRepository;
 import inventory.dto.AllInventoryResult;
@@ -32,8 +35,8 @@ public class QueryService {
      * @return 논리코드순 전체 상품 및 창고 합계; 상품 없음도 정상
      */
     public AllInventoryResult findAll() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return new AllInventoryResult(logicalRepo.findAllOrdered().stream().map(physicalRepo::summarize).toList(),
+                physicalRepo.warehouse());
     }
 
     /**
@@ -43,7 +46,8 @@ public class QueryService {
      * @throws BusinessRuleException CODE_NOT_FOUND
      */
     public ItemDetail findOne(String code) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        LogicalItem item = logicalRepo.findByCode(code)
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.CODE_NOT_FOUND, Map.of()));
+        return new ItemDetail(physicalRepo.summarize(item), physicalRepo.findByLogicalCodeOrdered(code));
     }
 }

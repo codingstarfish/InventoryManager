@@ -1,5 +1,30 @@
 package inventory;
 
+import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.io.PrintWriter;
+import java.io.OutputStreamWriter;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import inventory.validation.FileIntegrityValidator;
+import inventory.validation.InputValidator;
+import inventory.util.ConsoleView;
+import inventory.util.Console;
+import inventory.util.Input;
+import inventory.service.QueryService;
+import inventory.service.StockService;
+import inventory.service.ProductService;
+import inventory.repository.PhysicalItemRepository;
+import inventory.repository.LogicalItemRepository;
+import inventory.exception.StartupDataException;
+import inventory.dto.InventorySnapshot;
+import inventory.database.CommitCoordinator;
+import inventory.database.InventoryDatabase;
+import inventory.database.EntityWriter;
+import inventory.database.EntityParser;
+import inventory.database.EntityLoader;
+import inventory.database.StartupLoader;
+import inventory.database.FileAccess;
 import java.io.IOException;
 
 /**
@@ -23,7 +48,28 @@ public class Main {
      * @throws IOException 표준 입력 장치 장애
      */
     public static void main(String[] args) throws IOException {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Input input = new Input(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)));
+        ConsoleView view = new ConsoleView(new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true));
+        FileAccess access = new FileAccess(Path.of("").toAbsolutePath());
+        StartupLoader startup = new StartupLoader(access, new EntityLoader(), new EntityParser(), new FileIntegrityValidator());
+        int exitCode;
+        view.startupChecking();
+        try {
+            InventorySnapshot initial = startup.load();
+            view.startupPassed();
+            InventoryDatabase db = new InventoryDatabase(initial);
+            EntityWriter writer = new EntityWriter(access.logicalPath(), access.physicalPath());
+            CommitCoordinator commit = new CommitCoordinator(db, writer);
+            LogicalItemRepository logicalRepo = new LogicalItemRepository(db);
+            PhysicalItemRepository physicalRepo = new PhysicalItemRepository(db);
+            ProductService products = new ProductService(db, logicalRepo, commit);
+            StockService stock = new StockService(db, logicalRepo, physicalRepo, commit);
+            QueryService query = new QueryService(logicalRepo, physicalRepo);
+            exitCode = new Console(input, new InputValidator(), products, stock, query, view).run();
+        } catch (StartupDataException e) {
+            view.startupFailed(e);
+            exitCode = 1;
+        }
+        System.exit(exitCode);
     }
 }

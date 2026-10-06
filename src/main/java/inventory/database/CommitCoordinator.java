@@ -1,5 +1,11 @@
 package inventory.database;
 
+import java.util.Comparator;
+import java.util.List;
+import inventory.literal.Limits;
+import inventory.validation.DomainRules;
+import inventory.entity.PhysicalItem;
+import inventory.entity.LogicalItem;
 import inventory.dto.InventorySnapshot;
 import java.util.Objects;
 
@@ -30,8 +36,25 @@ public class CommitCoordinator {
      * @throws inventory.exception.SaveFailureException 논리 파일 저장 실패
      */
     public void commitLogical(InventorySnapshot candidate) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(candidate, "candidate");
+        InventorySnapshot before = db.snapshot();
+        if (candidate.logicalItems().size() != before.logicalItems().size() + 1) {
+            throw new IllegalArgumentException("등록 후보는 논리상품 하나만 추가해야 합니다.");
+        }
+        for (var entry : before.logicalItems().entrySet()) {
+            if (!entry.getValue().equals(candidate.logicalItems().get(entry.getKey()))
+                    || !before.physicalByCode().get(entry.getKey()).equals(candidate.physicalByCode().get(entry.getKey()))) {
+                throw new IllegalArgumentException("등록 후보의 기존 상품 또는 낱개가 변경되었습니다.");
+            }
+        }
+        String newCode = DomainRules.formatLogicalCode(candidate.logicalItems().size());
+        if (!candidate.physicalByCode().get(newCode).isEmpty()) {
+            throw new IllegalArgumentException("신규 상품에는 낱개가 없어야 합니다.");
+        }
+        List<LogicalItem> rows = candidate.logicalItems().values().stream()
+                .sorted(Comparator.comparing(LogicalItem::code)).toList();
+        writer.writeLogical(rows);
+        db.publish(candidate);
     }
 
     /**
@@ -41,7 +64,47 @@ public class CommitCoordinator {
      * @throws inventory.exception.SaveFailureException 물리 파일 저장 실패
      */
     public void commitPhysical(InventorySnapshot candidate) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(candidate, "candidate");
+        InventorySnapshot before = db.snapshot();
+        if (!candidate.logicalItems().equals(before.logicalItems())) {
+            throw new IllegalArgumentException("입고·판매 후보는 논리상품을 바꿀 수 없습니다.");
+        }
+        int changedProducts = 0;
+        int added = 0;
+        int sold = 0;
+        for (String code : before.logicalItems().keySet()) {
+            List<PhysicalItem> oldRows = before.physicalByCode().get(code);
+            List<PhysicalItem> newRows = candidate.physicalByCode().get(code);
+            if (!oldRows.equals(newRows)) {
+                changedProducts++;
+            }
+            if (newRows.size() < oldRows.size()) {
+                throw new IllegalArgumentException("낱개 기록을 삭제할 수 없습니다.");
+            }
+            for (int i = 0; i < oldRows.size(); i++) {
+                PhysicalItem oldRow = oldRows.get(i);
+                PhysicalItem newRow = newRows.get(i);
+                if (oldRow.sold() && !newRow.sold()) {
+                    throw new IllegalArgumentException("판매 상태를 되돌릴 수 없습니다.");
+                }
+                if (!oldRow.sold() && newRow.sold()) {
+                    sold++;
+                }
+            }
+            for (int i = oldRows.size(); i < newRows.size(); i++) {
+                if (newRows.get(i).sold()) {
+                    throw new IllegalArgumentException("입고 낱개는 미판매 상태여야 합니다.");
+                }
+                added++;
+            }
+        }
+        if (changedProducts != 1 || (added > 0 && sold > 0) || added + sold < 1
+                || added + sold > Limits.MAX_QUANTITY) {
+            throw new IllegalArgumentException("한 상품의 입고 또는 판매 1~100개만 저장할 수 있습니다.");
+        }
+        List<PhysicalItem> rows = candidate.physicalByCode().values().stream().flatMap(List::stream)
+                .sorted(Comparator.comparing(PhysicalItem::logicalCode).thenComparingInt(PhysicalItem::suffix)).toList();
+        writer.writePhysical(rows);
+        db.publish(candidate);
     }
 }

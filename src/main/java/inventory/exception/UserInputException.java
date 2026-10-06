@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * 오류 전달용 예외. 생성자와 접근자는 연결용으로 준비됨. 출력·종료·파일 변경 없음.
+ * 입력 오류 코드와 필드를 검증하고 불변 메타데이터를 전달합니다. 출력·종료·파일 변경 없음.
  */
 public class UserInputException extends RuntimeException {
     private static final long serialVersionUID = 1L;
@@ -29,6 +29,21 @@ public class UserInputException extends RuntimeException {
         this.field = Objects.requireNonNull(field, "field");
         this.code = Objects.requireNonNull(code, "code");
         this.details = Map.copyOf(details);
+        boolean matchesField = switch (field) {
+            case MENU -> code == ErrorCode.MENU_SYNTAX;
+            case NAME -> code == ErrorCode.NAME_SYNTAX;
+            case SIZE -> code == ErrorCode.SIZE_SYNTAX || code == ErrorCode.SIZE_RANGE;
+            case PRICE -> code == ErrorCode.PRICE_SYNTAX || code == ErrorCode.PRICE_RANGE
+                    || code == ErrorCode.PRICE_UNIT;
+            case LOGICAL_CODE -> code == ErrorCode.CODE_SYNTAX || code == ErrorCode.CODE_RANGE;
+            case INBOUND_QUANTITY -> code == ErrorCode.INBOUND_SYNTAX || code == ErrorCode.INBOUND_RANGE;
+            case SALE_QUANTITY -> code == ErrorCode.SALE_SYNTAX || code == ErrorCode.SALE_RANGE;
+            case QUERY_MODE -> code == ErrorCode.QUERY_MODE_SYNTAX;
+            case RETRY -> code == ErrorCode.RETRY_SYNTAX;
+        };
+        if (!matchesField) {
+            throw new IllegalArgumentException("입력 필드와 오류 코드가 일치하지 않습니다.");
+        }
     }
 
     /**

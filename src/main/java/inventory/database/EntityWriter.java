@@ -1,5 +1,12 @@
 package inventory.database;
 
+import inventory.validation.DomainRules;
+import java.io.IOException;
+import java.io.BufferedWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.Files;
+import java.util.Comparator;
 import java.nio.file.Path;
 import java.util.List;
 import inventory.entity.LogicalItem;
@@ -36,8 +43,11 @@ public class EntityWriter {
      * @throws SaveFailureException 기록·flush·close IOException 또는 접근 SecurityException; 파일명과 cause 보존
      */
     public void writeLogical(List<LogicalItem> items) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        List<LogicalItem> ordered = List.copyOf(items).stream()
+                .sorted(Comparator.comparing(LogicalItem::code)).toList();
+        List<String> lines = ordered.stream().map(item -> item.name() + "," + item.code()
+                + "," + item.size() + "," + item.price()).toList();
+        writeLines(logicalPath, lines);
     }
 
     /**
@@ -50,7 +60,22 @@ public class EntityWriter {
      * @throws SaveFailureException 기록·flush·close IOException 또는 접근 SecurityException; 파일명과 cause 보존
      */
     public void writePhysical(List<PhysicalItem> items) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        List<PhysicalItem> ordered = List.copyOf(items).stream()
+                .sorted(Comparator.comparing(PhysicalItem::logicalCode).thenComparingInt(PhysicalItem::suffix)).toList();
+        List<String> lines = ordered.stream().map(item -> item.logicalCode() + ","
+                + DomainRules.formatSuffix(item.suffix()) + "," + (item.sold() ? "1" : "0")).toList();
+        writeLines(physicalPath, lines);
+    }
+
+    private void writeLines(Path path, List<String> lines) {
+        try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8,
+                StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {
+            for (String line : lines) {
+                writer.write(line);
+                writer.write(System.lineSeparator());
+            }
+        } catch (IOException | SecurityException e) {
+            throw new SaveFailureException(path.getFileName().toString(), e);
+        }
     }
 }

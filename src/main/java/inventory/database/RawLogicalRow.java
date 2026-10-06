@@ -1,5 +1,7 @@
 package inventory.database;
 
+import inventory.literal.InputPatterns;
+import java.util.Objects;
 /**
  * lineNumber: 원본의 1부터 시작하는 행 번호.
  * name: 문법 통과한 이름.
@@ -29,7 +31,13 @@ public record RawLogicalRow(
      * @throws NullPointerException 문자열 필드가 null
      */
     public RawLogicalRow {
-        // TODO: 위 문법 단계의 생성자 검증만 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(code, "code");
+        if (lineNumber < 1 || !name.matches(InputPatterns.NAME)
+                || name.startsWith(" ") || name.endsWith(" ")
+                || !code.matches(InputPatterns.LOGICAL_CODE)
+                || size < 1 || size > 9999 || price < 1 || price > 99999999) {
+            throw new IllegalArgumentException("원본 행의 문법 계약 위반");
+        }
     }
 }

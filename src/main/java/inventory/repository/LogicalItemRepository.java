@@ -1,5 +1,8 @@
 package inventory.repository;
 
+import java.util.Comparator;
+import inventory.dto.InventorySnapshot;
+import inventory.validation.DomainRules;
 import inventory.database.InventoryDatabase;
 import inventory.entity.LogicalItem;
 import java.util.List;
@@ -27,8 +30,9 @@ public class LogicalItemRepository {
      * @return 해당 상품, 미등록이면 Optional.empty()
      */
     public Optional<LogicalItem> findByCode(String code) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateLogicalCode(code);
+        InventorySnapshot state = db.snapshot();
+        return Optional.ofNullable(state.logicalItems().get(code));
     }
 
     /**
@@ -36,8 +40,8 @@ public class LogicalItemRepository {
      * @return 논리코드 오름차순의 수정 불가 목록; 없으면 빈 목록
      */
     public List<LogicalItem> findAllOrdered() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        InventorySnapshot state = db.snapshot();
+        return state.logicalItems().values().stream().sorted(Comparator.comparing(LogicalItem::code)).toList();
     }
 
     /**
@@ -45,7 +49,6 @@ public class LogicalItemRepository {
      * @return 0~99999
      */
     public int size() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return db.snapshot().logicalItems().size();
     }
 }

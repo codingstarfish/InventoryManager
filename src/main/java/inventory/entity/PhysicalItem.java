@@ -1,5 +1,7 @@
 package inventory.entity;
 
+import inventory.literal.Limits;
+import inventory.validation.DomainRules;
 /**
  * logicalCode: 유효 논리코드.
  * suffix: 1~999.
@@ -21,16 +23,17 @@ public record PhysicalItem(
      * @throws NullPointerException 필드가 null
      */
     public PhysicalItem {
-        // TODO: 위 생성자 검증을 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateLogicalCode(logicalCode);
+        if (suffix < 1 || suffix > Limits.MAX_SUFFIX) {
+            throw new IllegalArgumentException("접미번호 범위 위반");
+        }
     }
     /**
      * DomainRules.formatSuffix(suffix)와 논리코드를 조합합니다.
      * @return P00001-001 형태의 전체 물리코드
      */
     public String physicalCode() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return logicalCode + "-" + DomainRules.formatSuffix(suffix);
     }
 
     /**
@@ -39,7 +42,9 @@ public record PhysicalItem(
      * @throws IllegalStateException 이미 sold=true인 경우
      */
     public PhysicalItem markSold() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (sold) {
+            throw new IllegalStateException("이미 판매한 낱개입니다.");
+        }
+        return new PhysicalItem(logicalCode, suffix, true);
     }
 }

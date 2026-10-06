@@ -1,5 +1,7 @@
 package inventory.dto;
 
+import inventory.literal.Limits;
+import inventory.validation.DomainRules;
 import java.util.List;
 
 /**
@@ -28,7 +30,22 @@ public record StockChangeResult(
      * @throws NullPointerException 필드 또는 컬렉션 원소가 null
      */
     public StockChangeResult {
-        // TODO: 위 생성자 검증과 필요한 불변 복사를 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateLogicalCode(logicalCode);
+        DomainRules.validateQuantity(quantity);
+        affectedCodes = List.copyOf(affectedCodes);
+        if (currentAfter < 0 || currentAfter > Limits.MAX_SUFFIX || affectedCodes.size() != quantity) {
+            throw new IllegalArgumentException("수량 또는 변경 목록 길이 위반");
+        }
+        int previous = 0;
+        for (String code : affectedCodes) {
+            if (!code.matches("P[0-9]{5}-[0-9]{3}") || !code.startsWith(logicalCode + "-")) {
+                throw new IllegalArgumentException("변경 물리코드 형식 또는 상품 불일치");
+            }
+            int suffix = Integer.parseInt(code.substring(7));
+            if (suffix <= previous || suffix > Limits.MAX_SUFFIX) {
+                throw new IllegalArgumentException("변경 접미번호 순서 또는 범위 위반");
+            }
+            previous = suffix;
+        }
     }
 }

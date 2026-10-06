@@ -1,5 +1,9 @@
 package inventory.dto;
 
+import inventory.validation.DomainRules;
+import inventory.literal.Limits;
+import java.util.HashMap;
+import java.util.Objects;
 import inventory.entity.LogicalItem;
 import inventory.entity.PhysicalItem;
 import java.util.List;
@@ -29,7 +33,44 @@ public record InventorySnapshot(
      * @throws NullPointerException 필드 또는 컬렉션 원소가 null
      */
     public InventorySnapshot {
-        // TODO: 위 생성자 검증과 필요한 불변 복사를 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        logicalItems = Map.copyOf(logicalItems);
+        Objects.requireNonNull(physicalByCode, "physicalByCode");
+        if (logicalItems.size() > Limits.MAX_PRODUCTS || !logicalItems.keySet().equals(physicalByCode.keySet())) {
+            throw new IllegalArgumentException("논리·물리 맵 key 또는 상품 수 계약 위반");
+        }
+        Map<String, List<PhysicalItem>> physicalCopy = new HashMap<>();
+        List<String> codes = logicalItems.keySet().stream().sorted().toList();
+        long used = 0;
+        for (int i = 0; i < codes.size(); i++) {
+            String code = codes.get(i);
+            LogicalItem item = logicalItems.get(code);
+            if (!code.equals(item.code()) || !code.equals(DomainRules.formatLogicalCode(i + 1))) {
+                throw new IllegalArgumentException("논리코드 key 또는 연속성 위반");
+            }
+            List<PhysicalItem> rows = List.copyOf(physicalByCode.get(code));
+            if (rows.size() > Limits.MAX_SUFFIX) {
+                throw new IllegalArgumentException("상품별 누적 입고 한도 위반");
+            }
+            boolean seenUnsold = false;
+            for (int j = 0; j < rows.size(); j++) {
+                PhysicalItem row = rows.get(j);
+                if (!code.equals(row.logicalCode()) || row.suffix() != j + 1) {
+                    throw new IllegalArgumentException("낱개 참조 또는 접미번호 연속성 위반");
+                }
+                if (row.sold()) {
+                    if (seenUnsold) {
+                        throw new IllegalArgumentException("선입선출 상태 위반");
+                    }
+                } else {
+                    seenUnsold = true;
+                    used += (long) item.size();
+                }
+            }
+            physicalCopy.put(code, rows);
+        }
+        if (used > Limits.MAX_CAPACITY) {
+            throw new IllegalArgumentException("창고 용량 초과");
+        }
+        physicalByCode = Map.copyOf(physicalCopy);
     }
 }

@@ -1,5 +1,9 @@
 package inventory.validation;
 
+import java.util.Locale;
+import inventory.literal.Limits;
+import inventory.literal.InputPatterns;
+import java.util.Objects;
 /**
  * 순수한 공통 값 검증·포맷. static 메서드, 가변 상태 없음.
  * 입력/파일 검증기는 실패를 자신의 예외·ErrorCode로 변환합니다.
@@ -14,8 +18,12 @@ public final class DomainRules {
      * @throws IllegalArgumentException 허용 조건 위반
      */
     public static void validateName(String normalized) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(normalized, "normalized");
+        int length = normalized.codePointCount(0, normalized.length());
+        if (!normalized.matches(InputPatterns.NAME) || length < 1 || length > Limits.MAX_NAME_LENGTH
+                || normalized.startsWith(" ") || normalized.endsWith(" ")) {
+            throw new IllegalArgumentException("상품명 규칙 위반");
+        }
     }
 
     /**
@@ -24,8 +32,14 @@ public final class DomainRules {
      * @throws IllegalArgumentException 허용 조건 위반
      */
     public static void validateLogicalCode(String code) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(code, "code");
+        if (!code.matches(InputPatterns.LOGICAL_CODE)) {
+            throw new IllegalArgumentException("논리코드 문법 위반");
+        }
+        int number = Integer.parseInt(code.substring(1));
+        if (number < 1 || number > Limits.MAX_PRODUCTS) {
+            throw new IllegalArgumentException("논리코드 번호 범위 위반");
+        }
     }
 
     /**
@@ -34,8 +48,9 @@ public final class DomainRules {
      * @throws IllegalArgumentException 허용 조건 위반
      */
     public static void validateSize(long value) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (value < Limits.MIN_SIZE || value > Limits.MAX_SIZE) {
+            throw new IllegalArgumentException("허용 범위 위반: " + value);
+        }
     }
 
     /**
@@ -44,8 +59,12 @@ public final class DomainRules {
      * @throws IllegalArgumentException 허용 조건 위반
      */
     public static void validatePrice(long value) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (value < Limits.MIN_PRICE || value > Limits.MAX_PRICE) {
+            throw new IllegalArgumentException("가격 범위 위반: " + value);
+        }
+        if (value % Limits.PRICE_UNIT != 0) {
+            throw new IllegalArgumentException("가격은 10원 단위여야 합니다.");
+        }
     }
 
     /**
@@ -54,8 +73,9 @@ public final class DomainRules {
      * @throws IllegalArgumentException 허용 조건 위반
      */
     public static void validateQuantity(long value) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (value < Limits.MIN_QUANTITY || value > Limits.MAX_QUANTITY) {
+            throw new IllegalArgumentException("허용 범위 위반: " + value);
+        }
     }
 
     /**
@@ -65,8 +85,10 @@ public final class DomainRules {
      * @throws IllegalArgumentException 번호 범위 밖
      */
     public static String formatLogicalCode(int number) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (number < 1 || number > Limits.MAX_PRODUCTS) {
+            throw new IllegalArgumentException("논리번호 범위 위반");
+        }
+        return String.format(Locale.ROOT, "P%05d", number);
     }
 
     /**
@@ -76,7 +98,9 @@ public final class DomainRules {
      * @throws IllegalArgumentException 접미번호 범위 밖
      */
     public static String formatSuffix(int suffix) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (suffix < 1 || suffix > Limits.MAX_SUFFIX) {
+            throw new IllegalArgumentException("접미번호 범위 위반");
+        }
+        return String.format(Locale.ROOT, "%03d", suffix);
     }
 }

@@ -1,5 +1,16 @@
 package inventory.database;
 
+import inventory.literal.ErrorCode;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.util.OptionalInt;
+import java.util.ArrayList;
+import java.util.Objects;
 import java.nio.file.Path;
 import java.util.List;
 import inventory.exception.StartupDataException;
@@ -22,7 +33,27 @@ public class EntityLoader {
      * @throws StartupDataException FILE_READ, FILE_UTF8 또는 FILE_BOM
      */
     public List<String> readStrictLines(Path path) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(path, "path");
+        String name = path.getFileName().toString();
+        List<String> lines = new ArrayList<>();
+        var decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(path), decoder))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.indexOf('\uFEFF') >= 0) {
+                    throw new StartupDataException(List.of(name), ErrorCode.FILE_BOM,
+                            "BOM 없는 UTF-8 파일이어야 합니다.", OptionalInt.of(lines.size() + 1));
+                }
+                lines.add(line);
+            }
+        } catch (CharacterCodingException e) {
+            throw new StartupDataException(List.of(name), ErrorCode.FILE_UTF8,
+                    "올바른 UTF-8 파일이어야 합니다.", OptionalInt.empty(), e);
+        } catch (IOException | SecurityException e) {
+            throw new StartupDataException(List.of(name), ErrorCode.FILE_READ,
+                    "데이터 파일을 읽을 수 없습니다.", OptionalInt.empty(), e);
+        }
+        return List.copyOf(lines);
     }
 }

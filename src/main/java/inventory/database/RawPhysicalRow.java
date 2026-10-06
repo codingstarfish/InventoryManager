@@ -1,5 +1,7 @@
 package inventory.database;
 
+import inventory.literal.InputPatterns;
+import java.util.Objects;
 /**
  * lineNumber: 원본의 1부터 시작하는 행 번호.
  * logicalCode: 문법 통과한 논리코드.
@@ -26,7 +28,10 @@ public record RawPhysicalRow(
      * @throws NullPointerException 문자열 필드가 null
      */
     public RawPhysicalRow {
-        // TODO: 위 문법 단계의 생성자 검증만 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(logicalCode, "logicalCode");
+        if (lineNumber < 1 || !logicalCode.matches(InputPatterns.LOGICAL_CODE)
+                || suffix < 0 || suffix > 999) {
+            throw new IllegalArgumentException("원본 행의 문법 계약 위반");
+        }
     }
 }

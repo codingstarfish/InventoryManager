@@ -1,5 +1,9 @@
 package inventory.repository;
 
+import java.util.OptionalInt;
+import inventory.literal.Limits;
+import inventory.dto.InventorySnapshot;
+import inventory.validation.DomainRules;
 import inventory.database.InventoryDatabase;
 import inventory.entity.LogicalItem;
 import inventory.entity.PhysicalItem;
@@ -29,8 +33,9 @@ public class PhysicalItemRepository {
      * @return 접미번호순 불변 목록; 낱개 없음/미등록 코드 모두 빈 목록
      */
     public List<PhysicalItem> findByLogicalCodeOrdered(String code) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateLogicalCode(code);
+        InventorySnapshot state = db.snapshot();
+        return state.physicalByCode().getOrDefault(code, List.of());
     }
 
     /**
@@ -40,8 +45,16 @@ public class PhysicalItemRepository {
      * @return H=T+Q, A=999-H를 만족하는 상품별 수량
      */
     public StockSummary summarize(LogicalItem item) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(item, "item");
+        InventorySnapshot state = db.snapshot();
+        if (!item.equals(state.logicalItems().get(item.code()))) {
+            throw new IllegalArgumentException("현재 상태에 등록된 상품이 아닙니다.");
+        }
+        List<PhysicalItem> rows = state.physicalByCode().get(item.code());
+        int received = rows.size();
+        int sold = (int) rows.stream().filter(PhysicalItem::sold).count();
+        return new StockSummary(item, received, sold, received - sold, Limits.MAX_SUFFIX - received,
+                received == Limits.MAX_SUFFIX ? OptionalInt.empty() : OptionalInt.of(received + 1));
     }
 
     /**
@@ -49,7 +62,12 @@ public class PhysicalItemRepository {
      * @return 사용 용량과 남은 용량; long 곱·합
      */
     public WarehouseSummary warehouse() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        InventorySnapshot state = db.snapshot();
+        long used = 0;
+        for (var entry : state.logicalItems().entrySet()) {
+            long current = state.physicalByCode().get(entry.getKey()).stream().filter(row -> !row.sold()).count();
+            used += (long) entry.getValue().size() * current;
+        }
+        return new WarehouseSummary(used, Limits.MAX_CAPACITY - used);
     }
 }

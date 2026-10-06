@@ -1,5 +1,6 @@
 package inventory.dto;
 
+import java.util.Objects;
 import java.util.List;
 
 /**
@@ -20,7 +21,20 @@ public record AllInventoryResult(
      * @throws NullPointerException 필드 또는 컬렉션 원소가 null
      */
     public AllInventoryResult {
-        // TODO: 위 생성자 검증과 필요한 불변 복사를 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        items = List.copyOf(items);
+        Objects.requireNonNull(warehouse, "warehouse");
+        String previous = "";
+        long used = 0;
+        for (StockSummary summary : items) {
+            String code = summary.item().code();
+            if (code.compareTo(previous) <= 0) {
+                throw new IllegalArgumentException("상품 목록 정렬 또는 중복 위반");
+            }
+            previous = code;
+            used += (long) summary.item().size() * summary.current();
+        }
+        if (used != warehouse.used()) {
+            throw new IllegalArgumentException("창고 합계 불일치");
+        }
     }
 }

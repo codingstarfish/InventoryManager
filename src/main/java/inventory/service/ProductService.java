@@ -1,5 +1,13 @@
 package inventory.service;
 
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import inventory.entity.PhysicalItem;
+import inventory.dto.InventorySnapshot;
+import inventory.validation.DomainRules;
+import inventory.literal.ErrorCode;
+import inventory.literal.Limits;
 import inventory.database.InventoryDatabase;
 import inventory.database.CommitCoordinator;
 import inventory.repository.LogicalItemRepository;
@@ -37,8 +45,7 @@ public class ProductService {
      * @return 상품 수가 99999 미만이면 true
      */
     public boolean canRegister() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return logicalRepo.size() < Limits.MAX_PRODUCTS;
     }
 
     /**
@@ -46,8 +53,7 @@ public class ProductService {
      * @return 등록 상품이 하나 이상이면 true
      */
     public boolean hasProducts() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return logicalRepo.size() > 0;
     }
 
     /**
@@ -57,8 +63,9 @@ public class ProductService {
      * @throws BusinessRuleException CODE_NOT_FOUND; details=Map.of()
      */
     public LogicalItem requireExisting(String code) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateLogicalCode(code);
+        return logicalRepo.findByCode(code)
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.CODE_NOT_FOUND, Map.of()));
     }
 
     /**
@@ -74,7 +81,21 @@ public class ProductService {
      * @throws IllegalArgumentException 개발 호출의 인자가 공통 규칙 위반
      */
     public RegisterResult register(String name, int size, int price) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateName(name);
+        DomainRules.validateSize(size);
+        DomainRules.validatePrice(price);
+        InventorySnapshot before = db.snapshot();
+        if (before.logicalItems().size() >= Limits.MAX_PRODUCTS) {
+            throw new BusinessRuleException(ErrorCode.LIMIT_LOGICAL_CODE, Map.of());
+        }
+        LogicalItem item = new LogicalItem(DomainRules.formatLogicalCode(before.logicalItems().size() + 1), name, size, price);
+        Map<String, LogicalItem> logical = new HashMap<>(before.logicalItems());
+        Map<String, List<PhysicalItem>> physical = new HashMap<>(before.physicalByCode());
+        logical.put(item.code(), item);
+        physical.put(item.code(), List.of());
+        InventorySnapshot candidate = new InventorySnapshot(logical, physical);
+        RegisterResult result = new RegisterResult(item);
+        commit.commitLogical(candidate);
+        return result;
     }
 }

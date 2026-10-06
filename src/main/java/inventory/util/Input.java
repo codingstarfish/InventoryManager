@@ -29,7 +29,10 @@ public class Input {
      * @throws IOException 입력 장치 읽기 실패; 정상 사용자 오류와 섞지 않음
      */
     public String readLine() throws IOException {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        String line = reader.readLine();
+        if (line == null) {
+            throw new EndOfInputException();
+        }
+        return line;
     }
 }

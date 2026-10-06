@@ -1,5 +1,15 @@
 package inventory.service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import inventory.entity.PhysicalItem;
+import inventory.entity.LogicalItem;
+import inventory.dto.InventorySnapshot;
+import inventory.validation.DomainRules;
+import inventory.literal.ErrorCode;
+import inventory.literal.Limits;
 import inventory.database.InventoryDatabase;
 import inventory.database.CommitCoordinator;
 import inventory.repository.LogicalItemRepository;
@@ -44,8 +54,11 @@ public class StockService {
      * @throws BusinessRuleException CODE_NOT_FOUND 또는 LIMIT_PHYSICAL_CODE; details=Map.of()
      */
     public StockSummary selectInbound(String code) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        StockSummary summary = physicalRepo.summarize(requireExisting(code));
+        if (summary.received() == Limits.MAX_SUFFIX) {
+            throw new BusinessRuleException(ErrorCode.LIMIT_PHYSICAL_CODE, Map.of());
+        }
+        return summary;
     }
 
     /**
@@ -55,8 +68,7 @@ public class StockService {
      * @throws BusinessRuleException CODE_NOT_FOUND
      */
     public StockSummary selectSale(String code) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return physicalRepo.summarize(requireExisting(code));
     }
 
     /**
@@ -72,8 +84,32 @@ public class StockService {
      * @throws IllegalArgumentException 개발 호출의 유효하지 않은 인자
      */
     public StockChangeResult receive(String code, int quantity) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateLogicalCode(code);
+        DomainRules.validateQuantity(quantity);
+        StockSummary summary = selectInbound(code);
+        if (quantity > summary.issuable()) {
+            throw new BusinessRuleException(ErrorCode.SUFFIX_SHORTAGE, Map.of("issuable", (long) summary.issuable()));
+        }
+        long required = (long) summary.item().size() * quantity;
+        long remaining = physicalRepo.warehouse().remaining();
+        if (required > remaining) {
+            throw new BusinessRuleException(ErrorCode.CAPACITY_SHORTAGE,
+                    Map.of("required", required, "remaining", remaining));
+        }
+        InventorySnapshot before = db.snapshot();
+        List<PhysicalItem> rows = new ArrayList<>(before.physicalByCode().get(code));
+        List<String> affected = new ArrayList<>();
+        for (int i = 1; i <= quantity; i++) {
+            PhysicalItem row = new PhysicalItem(code, summary.received() + i, false);
+            rows.add(row);
+            affected.add(row.physicalCode());
+        }
+        Map<String, List<PhysicalItem>> physical = new HashMap<>(before.physicalByCode());
+        physical.put(code, rows);
+        InventorySnapshot candidate = new InventorySnapshot(before.logicalItems(), physical);
+        StockChangeResult result = new StockChangeResult(code, quantity, summary.current() + quantity, affected);
+        commit.commitPhysical(candidate);
+        return result;
     }
 
     /**
@@ -89,7 +125,33 @@ public class StockService {
      * @throws IllegalArgumentException 개발 호출의 유효하지 않은 인자
      */
     public StockChangeResult sell(String code, int quantity) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateLogicalCode(code);
+        DomainRules.validateQuantity(quantity);
+        StockSummary summary = selectSale(code);
+        if (quantity > summary.current()) {
+            throw new BusinessRuleException(ErrorCode.STOCK_SHORTAGE, Map.of("current", (long) summary.current()));
+        }
+        InventorySnapshot before = db.snapshot();
+        List<PhysicalItem> rows = new ArrayList<>(before.physicalByCode().get(code));
+        List<String> affected = new ArrayList<>();
+        for (int i = 0; i < rows.size() && affected.size() < quantity; i++) {
+            PhysicalItem row = rows.get(i);
+            if (!row.sold()) {
+                rows.set(i, row.markSold());
+                affected.add(row.physicalCode());
+            }
+        }
+        Map<String, List<PhysicalItem>> physical = new HashMap<>(before.physicalByCode());
+        physical.put(code, rows);
+        InventorySnapshot candidate = new InventorySnapshot(before.logicalItems(), physical);
+        StockChangeResult result = new StockChangeResult(code, quantity, summary.current() - quantity, affected);
+        commit.commitPhysical(candidate);
+        return result;
+    }
+
+    private LogicalItem requireExisting(String code) {
+        DomainRules.validateLogicalCode(code);
+        return logicalRepo.findByCode(code)
+                .orElseThrow(() -> new BusinessRuleException(ErrorCode.CODE_NOT_FOUND, Map.of()));
     }
 }

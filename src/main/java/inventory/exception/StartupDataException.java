@@ -36,6 +36,10 @@ public class StartupDataException extends RuntimeException {
         if (this.fileNames.isEmpty() || (lineNumber.isPresent() && lineNumber.getAsInt() < 1)) {
             throw new IllegalArgumentException("파일명 또는 행 번호 계약 위반");
         }
+        if (this.fileNames.stream().anyMatch(String::isEmpty) || reason.isEmpty()
+                || !code.name().startsWith("FILE_")) {
+            throw new IllegalArgumentException("시작 오류 메타데이터 계약 위반");
+        }
     }
 
     /**

@@ -1,5 +1,6 @@
 package inventory.dto;
 
+import inventory.literal.Limits;
 /**
  * used: 미판매 낱개의 크기 합.
  * remaining: 창고 남은 용량.
@@ -18,7 +19,9 @@ public record WarehouseSummary(
      * @throws NullPointerException 필드가 null
      */
     public WarehouseSummary {
-        // TODO: 위 생성자 검증을 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (used < 0 || used > Limits.MAX_CAPACITY || remaining < 0
+                || remaining > Limits.MAX_CAPACITY || used + remaining != Limits.MAX_CAPACITY) {
+            throw new IllegalArgumentException("창고 용량 관계 위반");
+        }
     }
 }

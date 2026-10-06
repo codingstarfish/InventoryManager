@@ -1,5 +1,11 @@
 package inventory.database;
 
+import inventory.literal.ErrorCode;
+import inventory.literal.DataPaths;
+import java.util.OptionalInt;
+import java.util.List;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import inventory.exception.StartupDataException;
 import java.util.Objects;
@@ -26,8 +32,27 @@ public class FileAccess {
      * @throws StartupDataException FILE_CREATE 또는 FILE_NOT_REGULAR; 실패 경로·cause 보존
      */
     public void ensureDataFiles() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Path data = workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR);
+        try {
+            Files.createDirectories(data);
+        } catch (IOException | SecurityException e) {
+            throw new StartupDataException(List.of(DataPaths.DATA_DIR), ErrorCode.FILE_CREATE,
+                    "데이터 디렉터리를 생성할 수 없습니다.", OptionalInt.empty(), e);
+        }
+        for (Path path : List.of(logicalPath(), physicalPath())) {
+            try {
+                if (!Files.exists(path)) {
+                    Files.createFile(path);
+                }
+                if (!Files.isRegularFile(path)) {
+                    throw new StartupDataException(List.of(path.getFileName().toString()),
+                            ErrorCode.FILE_NOT_REGULAR, "데이터 파일 경로가 일반 파일이 아닙니다.", OptionalInt.empty());
+                }
+            } catch (IOException | SecurityException e) {
+                throw new StartupDataException(List.of(path.getFileName().toString()), ErrorCode.FILE_CREATE,
+                        "빈 데이터 파일을 생성할 수 없습니다.", OptionalInt.empty(), e);
+            }
+        }
     }
 
     /**
@@ -36,8 +61,29 @@ public class FileAccess {
      * @throws StartupDataException FILE_NOT_REGULAR, FILE_READ 또는 FILE_WRITE_ACCESS
      */
     public void checkReadableWritable() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        for (Path path : List.of(logicalPath(), physicalPath())) {
+            String fileName = path.getFileName().toString();
+            ErrorCode stage = ErrorCode.FILE_READ;
+            try {
+                if (!Files.isRegularFile(path)) {
+                    throw new StartupDataException(List.of(fileName), ErrorCode.FILE_NOT_REGULAR,
+                            "데이터 파일 경로가 일반 파일이 아닙니다.", OptionalInt.empty());
+                }
+                if (!Files.isReadable(path)) {
+                    throw new StartupDataException(List.of(fileName), ErrorCode.FILE_READ,
+                            "데이터 파일을 읽을 수 없습니다.", OptionalInt.empty());
+                }
+                stage = ErrorCode.FILE_WRITE_ACCESS;
+                if (!Files.isWritable(path)) {
+                    throw new StartupDataException(List.of(fileName), stage,
+                            "데이터 파일에 쓸 수 없습니다.", OptionalInt.empty());
+                }
+            } catch (SecurityException e) {
+                throw new StartupDataException(List.of(fileName), stage,
+                        stage == ErrorCode.FILE_READ ? "데이터 파일을 읽을 수 없습니다."
+                                : "데이터 파일에 쓸 수 없습니다.", OptionalInt.empty(), e);
+            }
+        }
     }
 
     /**
@@ -45,8 +91,7 @@ public class FileAccess {
      * @return 작업 디렉터리의 data 아래 논리 파일의 절대 경로
      */
     public Path logicalPath() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.LOGICAL_FILE);
     }
 
     /**
@@ -54,7 +99,6 @@ public class FileAccess {
      * @return 작업 디렉터리의 data 아래 물리 파일의 절대 경로
      */
     public Path physicalPath() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.PHYSICAL_FILE);
     }
 }

@@ -20,7 +20,7 @@ public record ParsedFiles(
      * @throws NullPointerException 필드 또는 컬렉션 원소가 null
      */
     public ParsedFiles {
-        // TODO: 위 생성자 검증과 필요한 불변 복사를 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        logicalRows = List.copyOf(logicalRows);
+        physicalRows = List.copyOf(physicalRows);
     }
 }

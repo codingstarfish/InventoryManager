@@ -1,5 +1,17 @@
 package inventory.util;
 
+import java.util.function.Function;
+import java.util.Map;
+import java.util.Optional;
+import inventory.dto.ItemDetail;
+import inventory.dto.StockSummary;
+import inventory.literal.ErrorCode;
+import inventory.literal.CodePurpose;
+import inventory.literal.Field;
+import inventory.exception.SaveFailureException;
+import inventory.exception.EndOfInputException;
+import inventory.exception.BusinessRuleException;
+import inventory.exception.UserInputException;
 import inventory.validation.InputValidator;
 import inventory.service.ProductService;
 import inventory.service.StockService;
@@ -52,8 +64,35 @@ public class Console {
      * @throws IOException 입력 장치 장애를 Main에 전달
      */
     public int run() throws IOException {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        try {
+            while (true) {
+                view.mainMenu();
+                int menu;
+                try {
+                    menu = validator.parseMainMenu(input.readLine());
+                } catch (UserInputException e) {
+                    view.error(e.code(), e.details());
+                    continue;
+                }
+                switch (menu) {
+                    case 1 -> registerMenu();
+                    case 2 -> receiveMenu();
+                    case 3 -> saleMenu();
+                    case 4 -> queryMenu();
+                    case 5 -> {
+                        view.normalExit();
+                        return 0;
+                    }
+                    default -> throw new IllegalStateException("검증되지 않은 메뉴 번호");
+                }
+            }
+        } catch (EndOfInputException e) {
+            view.eofExit();
+            return 0;
+        } catch (SaveFailureException e) {
+            view.saveFailed(e);
+            return 1;
+        }
     }
 
     /**
@@ -66,8 +105,30 @@ public class Console {
      * @throws inventory.exception.SaveFailureException run으로 전달
      */
     private void registerMenu() throws IOException {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (!productService.canRegister()) {
+            view.error(ErrorCode.LIMIT_LOGICAL_CODE, Map.of());
+            return;
+        }
+        Optional<String> name = readValue(Field.NAME, validator::parseName);
+        if (name.isEmpty()) {
+            return;
+        }
+        Optional<Integer> size = readValue(Field.SIZE, validator::parseSize);
+        if (size.isEmpty()) {
+            return;
+        }
+        Optional<Integer> price = readValue(Field.PRICE, validator::parsePrice);
+        if (price.isEmpty()) {
+            return;
+        }
+        try {
+            view.registered(productService.register(name.get(), size.get(), price.get()));
+        } catch (BusinessRuleException e) {
+            if (e.code() != ErrorCode.LIMIT_LOGICAL_CODE) {
+                throw e;
+            }
+            view.error(e.code(), e.details());
+        }
     }
 
     /**
@@ -81,8 +142,18 @@ public class Console {
      * @throws inventory.exception.SaveFailureException run으로 전달
      */
     private void receiveMenu() throws IOException {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (!productService.hasProducts()) {
+            view.noProducts(CodePurpose.INBOUND);
+            return;
+        }
+        Optional<StockSummary> selected = readCode(CodePurpose.INBOUND, stockService::selectInbound);
+        if (selected.isEmpty()) {
+            return;
+        }
+        StockSummary summary = selected.get();
+        view.selected(summary);
+        readValue(Field.INBOUND_QUANTITY, raw -> stockService.receive(summary.item().code(),
+                validator.parseQuantity(raw, Field.INBOUND_QUANTITY))).ifPresent(view::received);
     }
 
     /**
@@ -95,8 +166,18 @@ public class Console {
      * @throws inventory.exception.SaveFailureException run으로 전달
      */
     private void saleMenu() throws IOException {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        if (!productService.hasProducts()) {
+            view.noProducts(CodePurpose.SALE);
+            return;
+        }
+        Optional<StockSummary> selected = readCode(CodePurpose.SALE, stockService::selectSale);
+        if (selected.isEmpty()) {
+            return;
+        }
+        StockSummary summary = selected.get();
+        view.selected(summary);
+        readValue(Field.SALE_QUANTITY, raw -> stockService.sell(summary.item().code(),
+                validator.parseQuantity(raw, Field.SALE_QUANTITY))).ifPresent(view::sold);
     }
 
     /**
@@ -107,8 +188,16 @@ public class Console {
      * @throws inventory.exception.EndOfInputException run으로 전달
      */
     private void queryMenu() throws IOException {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Optional<Integer> mode = readValue(Field.QUERY_MODE, validator::parseQueryMode);
+        if (mode.isEmpty()) {
+            return;
+        }
+        if (mode.get() == 1) {
+            view.allInventory(queryService.findAll());
+        } else {
+            Optional<ItemDetail> detail = readCode(CodePurpose.QUERY, queryService::findOne);
+            detail.ifPresent(view::itemDetail);
+        }
     }
 
     /**
@@ -120,7 +209,62 @@ public class Console {
      * @throws inventory.exception.EndOfInputException run으로 전달
      */
     private boolean askRetry() throws IOException {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        while (true) {
+            view.prompt(Field.RETRY);
+            try {
+                return validator.parseRetry(input.readLine());
+            } catch (UserInputException e) {
+                view.error(e.code(), e.details());
+            }
+        }
+    }
+
+    /** 현재 필드만 반복하고 취소하면 빈 Optional로 해당 작업을 끝냅니다. */
+    private <T> Optional<T> readValue(Field field, Function<String, T> parse) throws IOException {
+        while (true) {
+            view.prompt(field);
+            try {
+                return Optional.of(parse.apply(input.readLine()));
+            } catch (UserInputException e) {
+                view.error(e.code(), e.details());
+            } catch (BusinessRuleException e) {
+                boolean retryable = field == Field.INBOUND_QUANTITY
+                        && (e.code() == ErrorCode.SUFFIX_SHORTAGE || e.code() == ErrorCode.CAPACITY_SHORTAGE)
+                        || field == Field.SALE_QUANTITY && e.code() == ErrorCode.STOCK_SHORTAGE;
+                if (!retryable) {
+                    throw e;
+                }
+                view.error(e.code(), e.details());
+            }
+            if (!askRetry()) {
+                view.cancelled();
+                return Optional.empty();
+            }
+        }
+    }
+
+    /** 등록 존재 확인까지 코드 단계에서 수행하며 입고 코드 소진은 즉시 메뉴로 복귀합니다. */
+    private <T> Optional<T> readCode(CodePurpose purpose, Function<String, T> select) throws IOException {
+        while (true) {
+            view.promptCode(purpose);
+            try {
+                String code = validator.parseLogicalCode(input.readLine());
+                return Optional.of(select.apply(code));
+            } catch (UserInputException e) {
+                view.error(e.code(), e.details());
+            } catch (BusinessRuleException e) {
+                view.error(e.code(), e.details());
+                if (purpose == CodePurpose.INBOUND && e.code() == ErrorCode.LIMIT_PHYSICAL_CODE) {
+                    return Optional.empty();
+                }
+                if (e.code() != ErrorCode.CODE_NOT_FOUND) {
+                    throw e;
+                }
+            }
+            if (!askRetry()) {
+                view.cancelled();
+                return Optional.empty();
+            }
+        }
     }
 }

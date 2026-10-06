@@ -23,8 +23,7 @@ public class InventoryDatabase {
      * @return 현재 snapshot; 가변 컬렉션 노출 금지
      */
     public InventorySnapshot snapshot() {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        return snapshot;
     }
 
     /**
@@ -33,8 +32,7 @@ public class InventoryDatabase {
      * @param next 검증·불변 복사가 완료된 null 아닌 후보 상태
      */
     void publish(InventorySnapshot next) {
-        // TODO: 위 계약에 맞춰 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        snapshot = Objects.requireNonNull(next, "next");
     }
 
 }

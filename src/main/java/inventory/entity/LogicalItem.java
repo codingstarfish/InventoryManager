@@ -1,5 +1,6 @@
 package inventory.entity;
 
+import inventory.validation.DomainRules;
 /**
  * code: P00001~P99999.
  * name: 양끝 공백 없는 허용 문자 1~30자.
@@ -24,7 +25,9 @@ public record LogicalItem(
      * @throws NullPointerException 필드가 null
      */
     public LogicalItem {
-        // TODO: 위 생성자 검증을 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        DomainRules.validateLogicalCode(code);
+        DomainRules.validateName(name);
+        DomainRules.validateSize(size);
+        DomainRules.validatePrice(price);
     }
 }

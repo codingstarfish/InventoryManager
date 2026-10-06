@@ -1,5 +1,6 @@
 package inventory.dto;
 
+import java.util.Objects;
 import inventory.entity.PhysicalItem;
 import java.util.List;
 
@@ -21,7 +22,26 @@ public record ItemDetail(
      * @throws NullPointerException 필드 또는 컬렉션 원소가 null
      */
     public ItemDetail {
-        // TODO: 위 생성자 검증과 필요한 불변 복사를 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(summary, "summary");
+        physicalItems = List.copyOf(physicalItems);
+        int soldCount = 0;
+        boolean seenUnsold = false;
+        for (int i = 0; i < physicalItems.size(); i++) {
+            PhysicalItem row = physicalItems.get(i);
+            if (!row.logicalCode().equals(summary.item().code()) || row.suffix() != i + 1) {
+                throw new IllegalArgumentException("단일 조회의 참조 또는 접미번호 위반");
+            }
+            if (row.sold()) {
+                if (seenUnsold) {
+                    throw new IllegalArgumentException("선입선출 위반");
+                }
+                soldCount++;
+            } else {
+                seenUnsold = true;
+            }
+        }
+        if (physicalItems.size() != summary.received() || soldCount != summary.sold()) {
+            throw new IllegalArgumentException("단일 조회 수량 불일치");
+        }
     }
 }

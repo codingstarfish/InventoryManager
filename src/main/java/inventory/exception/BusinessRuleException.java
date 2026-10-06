@@ -3,9 +3,10 @@ package inventory.exception;
 import inventory.literal.ErrorCode;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
- * 오류 전달용 예외. 생성자와 접근자는 연결용으로 준비됨. 출력·종료·파일 변경 없음.
+ * 업무 오류 코드와 필수 상세값을 검증하여 전달합니다. 출력·종료·파일 변경 없음.
  */
 public class BusinessRuleException extends RuntimeException {
     private static final long serialVersionUID = 1L;
@@ -24,6 +25,16 @@ public class BusinessRuleException extends RuntimeException {
         super(Objects.requireNonNull(code, "code").name());
         this.code = Objects.requireNonNull(code, "code");
         this.details = Map.copyOf(details);
+        Set<String> required = switch (code) {
+            case CODE_NOT_FOUND, LIMIT_LOGICAL_CODE, LIMIT_PHYSICAL_CODE -> Set.of();
+            case SUFFIX_SHORTAGE -> Set.of("issuable");
+            case CAPACITY_SHORTAGE -> Set.of("required", "remaining");
+            case STOCK_SHORTAGE -> Set.of("current");
+            default -> throw new IllegalArgumentException("업무 오류 코드가 아닙니다: " + code);
+        };
+        if (!this.details.keySet().containsAll(required) || this.details.values().stream().anyMatch(value -> value < 0)) {
+            throw new IllegalArgumentException("업무 오류 상세값이 없거나 유효하지 않습니다.");
+        }
     }
 
     /**

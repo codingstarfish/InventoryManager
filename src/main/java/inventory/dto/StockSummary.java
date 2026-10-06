@@ -1,5 +1,7 @@
 package inventory.dto;
 
+import inventory.literal.Limits;
+import java.util.Objects;
 import inventory.entity.LogicalItem;
 import java.util.OptionalInt;
 
@@ -33,7 +35,16 @@ public record StockSummary(
      * @throws NullPointerException 필드가 null
      */
     public StockSummary {
-        // TODO: 위 생성자 검증을 구현합니다.
-        throw new UnsupportedOperationException("미구현");
+        Objects.requireNonNull(item, "item");
+        Objects.requireNonNull(nextSuffix, "nextSuffix");
+        if (received < 0 || received > Limits.MAX_SUFFIX || sold < 0 || sold > received
+                || current < 0 || current > received || received != sold + current
+                || issuable != Limits.MAX_SUFFIX - received) {
+            throw new IllegalArgumentException("상품 수량 관계 위반");
+        }
+        if (received == Limits.MAX_SUFFIX ? nextSuffix.isPresent()
+                : nextSuffix.isEmpty() || nextSuffix.getAsInt() != received + 1) {
+            throw new IllegalArgumentException("다음 접미번호 계약 위반");
+        }
     }
 }

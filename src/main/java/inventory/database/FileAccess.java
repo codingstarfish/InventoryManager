@@ -37,7 +37,7 @@ public class FileAccess {
             Files.createDirectories(data);
         } catch (IOException | SecurityException e) {
             throw new StartupDataException(List.of(DataPaths.DATA_DIR), ErrorCode.FILE_CREATE,
-                    "데이터 디렉터리를 생성할 수 없습니다.", OptionalInt.empty(), e);
+                    "데이터 디렉터리나 빈 데이터 파일을 생성할 수 없습니다.", OptionalInt.empty(), e);
         }
         for (Path path : List.of(logicalPath(), physicalPath())) {
             try {
@@ -50,7 +50,7 @@ public class FileAccess {
                 }
             } catch (IOException | SecurityException e) {
                 throw new StartupDataException(List.of(path.getFileName().toString()), ErrorCode.FILE_CREATE,
-                        "빈 데이터 파일을 생성할 수 없습니다.", OptionalInt.empty(), e);
+                        "데이터 디렉터리나 빈 데이터 파일을 생성할 수 없습니다.", OptionalInt.empty(), e);
             }
         }
     }

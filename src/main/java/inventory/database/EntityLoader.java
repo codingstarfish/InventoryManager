@@ -24,7 +24,9 @@ public class EntityLoader {
     }
 
     /**
-     * UTF-8 REPORT 디코더로 읽고 BOM 거절. 기획서 원판 5.1절: LF·CR·CRLF 혼용 허용, CRLF는 개행 하나.
+     * UTF-8 REPORT 디코더로 읽고 파일 시작의 U+FEFF만 BOM으로 거절합니다.
+     * 중간의 U+FEFF는 원문에 유지하여 EntityParser에서 해당 필드의 문법 오류로 처리합니다.
+     * 기획서 원판 5.1절: LF·CR·CRLF 혼용 허용, CRLF는 개행 하나.
      * BufferedReader.readLine으로 행을 구분할 수 있습니다.
      * 0바이트=[]; 개행만=[""]; A+개행=[A]; A+개행 두 개=[A, ""].
      * 원문 공백·대소문자 유지. 자원 close 실패까지 시작 오류로 전달.
@@ -41,7 +43,7 @@ public class EntityLoader {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(path), decoder))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.indexOf('\uFEFF') >= 0) {
+                if (lines.isEmpty() && line.startsWith("\uFEFF")) {
                     throw new StartupDataException(List.of(name), ErrorCode.FILE_BOM,
                             "BOM 없는 UTF-8 파일이어야 합니다.", OptionalInt.of(lines.size() + 1));
                 }

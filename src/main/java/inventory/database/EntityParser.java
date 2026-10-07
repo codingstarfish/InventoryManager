@@ -41,7 +41,7 @@ public class EntityParser {
         }
         if (!fields[0].matches(InputPatterns.NAME) || fields[0].startsWith(" ") || fields[0].endsWith(" ")) {
             throw syntaxError(file, ErrorCode.FILE_NAME_SYNTAX,
-                    "상품명은 완성형 한글·영문·숫자·표준 공백으로 구성된 1~30자이며 양 끝에 공백이 없어야 합니다.", lineNo);
+                    "상품명은 완성형 한글, 영문, 숫자, 표준 공백으로 구성된 1~30자이며 양 끝에 공백이 없어야 합니다.", lineNo);
         }
         checkPattern(fields[1], InputPatterns.LOGICAL_CODE, file, ErrorCode.FILE_CODE_SYNTAX,
                 "논리코드는 대문자 P와 숫자 5자리여야 합니다.", lineNo);

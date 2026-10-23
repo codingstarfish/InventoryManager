@@ -9,7 +9,6 @@ import java.util.Set;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.Map;
-import java.util.Objects;
 import inventory.literal.ErrorCode;
 import inventory.literal.DataPaths;
 import inventory.literal.Limits;
@@ -17,7 +16,6 @@ import inventory.entity.PhysicalItem;
 import inventory.entity.LogicalItem;
 import inventory.database.RawPhysicalRow;
 import inventory.database.RawLogicalRow;
-import inventory.database.ParsedFiles;
 import inventory.dto.InventorySnapshot;
 import inventory.exception.StartupDataException;
 
@@ -36,14 +34,14 @@ public class FileIntegrityValidator {
      * 중복 검사 전에 Map.put으로 원본을 덮어쓰지 않습니다.
      * 파일의 원래 행 순서는 자유. 미판매를 만난 뒤 판매 완료가 나오면 FIFO 오류.
      * 유효 Entity와 상품별 빈 목록도 포함한 깊은 불변 Snapshot 구성.
-     * @param files 두 파일의 모든 문법 검사를 통과한 중간 행 목록
+     * @param logicalRows 논리 파일 문법을 통과한 행 목록
+     * @param physicalRows 물리 파일 문법을 통과한 행 목록
      * @return 모든 의미·관계 규칙을 만족하는 초기 상태
      * @throws StartupDataException 각 FILE_*_RANGE/PRICE_UNIT, DUPLICATE_CODE/CODE_GAP, UNKNOWN_REFERENCE, DUPLICATE_PHYSICAL/SUFFIX_GAP, FIFO, CAPACITY
      */
-    public InventorySnapshot validateAndBuild(ParsedFiles files) {
-        Objects.requireNonNull(files, "files");
+    public InventorySnapshot validateAndBuild(List<RawLogicalRow> logicalRows, List<RawPhysicalRow> physicalRows) {
         Map<String, LogicalItem> logical = new TreeMap<>();
-        for (RawLogicalRow row : files.logicalRows()) {
+        for (RawLogicalRow row : logicalRows) {
             String file = DataPaths.LOGICAL_FILE;
             validateCode(row.code(), file, row.lineNumber());
             if (row.size() < Limits.MIN_SIZE || row.size() > Limits.MAX_SIZE) {
@@ -72,7 +70,7 @@ public class FileIntegrityValidator {
             physical.put(code, new ArrayList<>());
         }
         Set<String> physicalCodes = new HashSet<>();
-        for (RawPhysicalRow row : files.physicalRows()) {
+        for (RawPhysicalRow row : physicalRows) {
             String file = DataPaths.PHYSICAL_FILE;
             validateCode(row.logicalCode(), file, row.lineNumber());
             if (row.suffix() < 1 || row.suffix() > Limits.MAX_SUFFIX) {

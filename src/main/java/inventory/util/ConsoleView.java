@@ -6,7 +6,7 @@ import inventory.literal.ErrorCode;
 import inventory.literal.Field;
 import inventory.dto.AllInventoryResult;
 import inventory.dto.ItemDetail;
-import inventory.dto.RegisterResult;
+import inventory.entity.LogicalItem;
 import inventory.dto.StockChangeResult;
 import inventory.dto.StockSummary;
 import inventory.exception.StartupDataException;
@@ -161,10 +161,9 @@ public class ConsoleView {
     /**
      * 신규 상품이 등록되었습니다.
      * 논리코드: {코드}, 상품명: {상품명}, 크기: {크기}, 가격: {가격}원, 현재 재고: 0개
-     * @param result 논리 파일 저장·close·게시 후 받은 결과
+     * @param item 논리 파일 저장을 완료한 상품
      */
-    public void registered(RegisterResult result) {
-        var item = result.item();
+    public void registered(LogicalItem item) {
         line("신규 상품이 등록되었습니다.");
         line("논리코드: " + item.code() + ", 상품명: " + item.name()
                 + ", 크기: " + item.size() + ", 가격: " + item.price() + "원, 현재 재고: 0개");

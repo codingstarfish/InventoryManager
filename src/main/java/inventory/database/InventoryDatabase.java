@@ -1,38 +1,87 @@
 package inventory.database;
 
 import inventory.dto.InventorySnapshot;
-import java.util.Objects;
+import inventory.dto.StockSummary;
+import inventory.dto.WarehouseSummary;
+import inventory.entity.LogicalItem;
+import inventory.entity.PhysicalItem;
+import inventory.exception.BusinessRuleException;
+import inventory.literal.ErrorCode;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 
-/**
- * 단 하나의 상태 소유자. 모든 Repository·Service·CommitCoordinator가 같은 인스턴스 사용.
- */
+/** 공유 상태의 조회와 저장. 파일 저장이 성공한 뒤에만 현재 상태를 교체합니다. */
 public class InventoryDatabase {
-    /** 전체 프로그램이 공유하는 현재 불변 상태. 가변 snapshot은 이 클래스만 소유. */
     private InventorySnapshot snapshot;
+    private final EntityWriter writer;
 
-    /**
-     * StartupLoader가 검증한 초기 상태를 보관합니다.
-     * @param initial 검증·불변 복사를 마친 초기 상태
-     */
-    public InventoryDatabase(InventorySnapshot initial) {
-        this.snapshot = Objects.requireNonNull(initial, "initial");
+    public InventoryDatabase(InventorySnapshot initial, EntityWriter writer) {
+        this.snapshot = initial;
+        this.writer = writer;
     }
 
-    /**
-     * 파일을 읽지 않고 현재 게시된 불변 상태를 반환합니다.
-     * @return 현재 snapshot; 가변 컬렉션 노출 금지
-     */
     public InventorySnapshot snapshot() {
         return snapshot;
     }
 
-    /**
-     * CommitCoordinator만 저장·close 성공 후 호출합니다.
-     * 검증·복사는 저장 전에 완료되어야 하므로 여기서는 상태 참조만 교체합니다.
-     * @param next 검증·불변 복사가 완료된 null 아닌 후보 상태
-     */
-    void publish(InventorySnapshot next) {
-        snapshot = Objects.requireNonNull(next, "next");
+    public int size() {
+        return snapshot.logicalItems().size();
     }
 
+    public LogicalItem requireItem(String code) {
+        LogicalItem item = snapshot.logicalItems().get(code);
+        if (item == null) {
+            throw new BusinessRuleException(ErrorCode.CODE_NOT_FOUND, Map.of());
+        }
+        return item;
+    }
+
+    public List<LogicalItem> findAllOrdered() {
+        return snapshot.logicalItems().values().stream()
+                .sorted(Comparator.comparing(LogicalItem::code)).toList();
+    }
+
+    /** 시작 검사와 입고·판매가 목록의 접미번호 순서를 유지합니다. */
+    public List<PhysicalItem> findPhysicalItems(String code) {
+        return snapshot.physicalByCode().getOrDefault(code, List.of());
+    }
+
+    public StockSummary summarize(String code) {
+        LogicalItem item = requireItem(code);
+        List<PhysicalItem> rows = findPhysicalItems(code);
+        int sold = 0;
+        for (PhysicalItem row : rows) {
+            if (row.sold()) {
+                sold++;
+            }
+        }
+        return new StockSummary(item, rows.size(), sold);
+    }
+
+    public WarehouseSummary warehouse() {
+        long used = 0;
+        for (LogicalItem item : snapshot.logicalItems().values()) {
+            for (PhysicalItem row : findPhysicalItems(item.code())) {
+                if (!row.sold()) {
+                    used += item.size();
+                }
+            }
+        }
+        return new WarehouseSummary(used);
+    }
+
+    /** 등록에서만 호출하며, 물리 파일은 저장하지 않습니다. */
+    public void saveLogical(InventorySnapshot candidate) {
+        writer.writeLogical(List.copyOf(candidate.logicalItems().values()));
+        snapshot = candidate;
+    }
+
+    /** 입고·판매에서만 호출하며, 논리 파일은 저장하지 않습니다. */
+    public void savePhysical(InventorySnapshot candidate) {
+        List<PhysicalItem> rows = candidate.physicalByCode().values().stream()
+                .flatMap(List::stream).toList();
+        writer.writePhysical(rows);
+        snapshot = candidate;
+    }
 }

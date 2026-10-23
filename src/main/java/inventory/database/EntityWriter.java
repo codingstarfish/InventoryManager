@@ -43,7 +43,7 @@ public class EntityWriter {
      * @throws SaveFailureException 기록·flush·close IOException 또는 접근 SecurityException; 파일명과 cause 보존
      */
     public void writeLogical(List<LogicalItem> items) {
-        List<LogicalItem> ordered = List.copyOf(items).stream()
+        List<LogicalItem> ordered = items.stream()
                 .sorted(Comparator.comparing(LogicalItem::code)).toList();
         List<String> lines = ordered.stream().map(item -> item.name() + "," + item.code()
                 + "," + item.size() + "," + item.price()).toList();
@@ -60,7 +60,7 @@ public class EntityWriter {
      * @throws SaveFailureException 기록·flush·close IOException 또는 접근 SecurityException; 파일명과 cause 보존
      */
     public void writePhysical(List<PhysicalItem> items) {
-        List<PhysicalItem> ordered = List.copyOf(items).stream()
+        List<PhysicalItem> ordered = items.stream()
                 .sorted(Comparator.comparing(PhysicalItem::logicalCode).thenComparingInt(PhysicalItem::suffix)).toList();
         List<String> lines = ordered.stream().map(item -> item.logicalCode() + ","
                 + DomainRules.formatSuffix(item.suffix()) + "," + (item.sold() ? "1" : "0")).toList();

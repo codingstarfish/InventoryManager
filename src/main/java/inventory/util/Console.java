@@ -71,7 +71,7 @@ public class Console {
                 try {
                     menu = validator.parseMainMenu(input.readLine());
                 } catch (UserInputException e) {
-                    view.error(e.code(), e.details());
+                    view.error(e.code(), Map.of());
                     continue;
                 }
                 switch (menu) {
@@ -121,14 +121,7 @@ public class Console {
         if (price.isEmpty()) {
             return;
         }
-        try {
-            view.registered(productService.register(name.get(), size.get(), price.get()));
-        } catch (BusinessRuleException e) {
-            if (e.code() != ErrorCode.LIMIT_LOGICAL_CODE) {
-                throw e;
-            }
-            view.error(e.code(), e.details());
-        }
+        view.registered(productService.register(name.get(), size.get(), price.get()));
     }
 
     /**
@@ -152,7 +145,7 @@ public class Console {
         }
         StockSummary summary = selected.get();
         view.selected(summary);
-        readValue(Field.INBOUND_QUANTITY, raw -> stockService.receive(summary.item().code(),
+        readValue(Field.INBOUND_QUANTITY, raw -> stockService.receive(summary,
                 validator.parseQuantity(raw, Field.INBOUND_QUANTITY))).ifPresent(view::received);
     }
 
@@ -176,7 +169,7 @@ public class Console {
         }
         StockSummary summary = selected.get();
         view.selected(summary);
-        readValue(Field.SALE_QUANTITY, raw -> stockService.sell(summary.item().code(),
+        readValue(Field.SALE_QUANTITY, raw -> stockService.sell(summary,
                 validator.parseQuantity(raw, Field.SALE_QUANTITY))).ifPresent(view::sold);
     }
 
@@ -214,7 +207,7 @@ public class Console {
             try {
                 return validator.parseRetry(input.readLine());
             } catch (UserInputException e) {
-                view.error(e.code(), e.details());
+                view.error(e.code(), Map.of());
             }
         }
     }
@@ -226,7 +219,7 @@ public class Console {
             try {
                 return Optional.of(parse.apply(input.readLine()));
             } catch (UserInputException e) {
-                view.error(e.code(), e.details());
+                view.error(e.code(), Map.of());
             } catch (BusinessRuleException e) {
                 boolean retryable = field == Field.INBOUND_QUANTITY
                         && (e.code() == ErrorCode.SUFFIX_SHORTAGE || e.code() == ErrorCode.CAPACITY_SHORTAGE)
@@ -251,7 +244,7 @@ public class Console {
                 String code = validator.parseLogicalCode(input.readLine());
                 return Optional.of(select.apply(code));
             } catch (UserInputException e) {
-                view.error(e.code(), e.details());
+                view.error(e.code(), Map.of());
             } catch (BusinessRuleException e) {
                 view.error(e.code(), e.details());
                 if (purpose == CodePurpose.INBOUND && e.code() == ErrorCode.LIMIT_PHYSICAL_CODE) {

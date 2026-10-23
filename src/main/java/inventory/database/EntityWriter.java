@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
 import java.util.Comparator;
+import java.util.Collection;
 import java.nio.file.Path;
 import java.util.List;
 import inventory.entity.LogicalItem;
@@ -42,7 +43,7 @@ public class EntityWriter {
      * @param items 검증된 전체 논리 레코드, 순서는 자유
      * @throws SaveFailureException 기록·flush·close IOException 또는 접근 SecurityException; 파일명과 cause 보존
      */
-    public void writeLogical(List<LogicalItem> items) {
+    public void writeLogical(Collection<LogicalItem> items) {
         List<LogicalItem> ordered = items.stream()
                 .sorted(Comparator.comparing(LogicalItem::code)).toList();
         List<String> lines = ordered.stream().map(item -> item.name() + "," + item.code()

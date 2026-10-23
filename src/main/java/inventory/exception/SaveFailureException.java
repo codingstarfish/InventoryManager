@@ -1,8 +1,5 @@
 package inventory.exception;
 
-import java.util.Objects;
-import inventory.literal.DataPaths;
-
 /**
  * EntityWriter에서 발생, Console.run에서 안내 후 종료 1. 실패 시 파일 보존은 보장하지 않음.
  */
@@ -18,11 +15,8 @@ public class SaveFailureException extends RuntimeException {
      * @param cause null이 아닌 원인 예외
      */
     public SaveFailureException(String fileName, Throwable cause) {
-        super(Objects.requireNonNull(fileName, "fileName") + " 저장 실패", Objects.requireNonNull(cause, "cause"));
+        super(fileName + " 저장 실패", cause);
         this.fileName = fileName;
-        if (!fileName.equals(DataPaths.LOGICAL_FILE) && !fileName.equals(DataPaths.PHYSICAL_FILE)) {
-            throw new IllegalArgumentException("데이터 파일명이 아닙니다: " + fileName);
-        }
     }
 
     /**

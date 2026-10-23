@@ -4,7 +4,6 @@ import inventory.database.EntityWriter;
 import inventory.database.FileAccess;
 import inventory.database.InventoryDatabase;
 import inventory.database.StartupLoader;
-import inventory.dto.InventorySnapshot;
 import inventory.exception.StartupDataException;
 import inventory.service.ProductService;
 import inventory.service.QueryService;
@@ -30,10 +29,10 @@ public class Main {
         int exitCode;
         view.startupChecking();
         try {
-            InventorySnapshot initial = new StartupLoader(access).load();
-            view.startupPassed();
             EntityWriter writer = new EntityWriter(access.logicalPath(), access.physicalPath());
-            InventoryDatabase db = new InventoryDatabase(initial, writer);
+            InventoryDatabase db = new InventoryDatabase(writer);
+            new StartupLoader(access).load(db);
+            view.startupPassed();
             exitCode = new Console(input, new InputValidator(), new ProductService(db),
                     new StockService(db), new QueryService(db), view).run();
         } catch (StartupDataException e) {

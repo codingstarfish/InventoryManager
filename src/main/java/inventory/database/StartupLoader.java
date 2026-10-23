@@ -1,6 +1,5 @@
 package inventory.database;
 
-import inventory.literal.ErrorCode;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
@@ -8,13 +7,14 @@ import java.nio.file.Files;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
-import java.util.OptionalInt;
 import java.util.ArrayList;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Comparator;
+import inventory.entity.LogicalItem;
+import inventory.entity.PhysicalItem;
 import inventory.exception.StartupDataException;
 import inventory.validation.FileIntegrityValidator;
-import inventory.dto.InventorySnapshot;
 
 /**
  * 시작 단계 조율. 생성자는 파일을 읽지 않습니다.
@@ -35,26 +35,36 @@ public class StartupLoader {
 
     /**
      * ensureDataFiles → checkReadableWritable → 양쪽 readStrictLines 및 전체 문법 검사
-     * → validateAndBuild → 정상 상태 반환.
+     * → 의미·관계 검사 → 검증된 데이터를 DB에 적재합니다.
      * 양쪽 파일 문법 검사가 끝나기 전 의미 오류를 보고하지 않습니다.
-     * 전체 성공 뒤에만 Main에서 InventoryDatabase 생성.
-     * @return 시작 무결성 검사를 통과한 불변 전체 상태
+     * 검사를 모두 통과한 뒤 메모리에 넣으며 파일을 다시 저장하지 않습니다.
+     * @param db 시작 데이터를 넣을 빈 DB
      * @throws StartupDataException 구체적인 생성·접근·문법·의미 오류 하나; 기존 파일 미변경
      */
-    public InventorySnapshot load() {
+    public void load(InventoryDatabase db) {
         access.ensureDataFiles();
         access.checkReadableWritable();
         List<String> logicalLines = readStrictLines(access.logicalPath());
         List<String> physicalLines = readStrictLines(access.physicalPath());
         List<RawLogicalRow> logicalRows = new ArrayList<>();
         List<RawPhysicalRow> physicalRows = new ArrayList<>();
-        for (int i = 0; i < logicalLines.size(); i++) {
-            logicalRows.add(parser.parseLogicalSyntax(logicalLines.get(i), i + 1));
+        for (String line : logicalLines) {
+            logicalRows.add(parser.parseLogicalSyntax(line));
         }
-        for (int i = 0; i < physicalLines.size(); i++) {
-            physicalRows.add(parser.parsePhysicalSyntax(physicalLines.get(i), i + 1));
+        for (String line : physicalLines) {
+            physicalRows.add(parser.parsePhysicalSyntax(line));
         }
-        return validator.validateAndBuild(logicalRows, physicalRows);
+        validator.validate(logicalRows, physicalRows);
+        for (RawLogicalRow row : logicalRows) {
+            db.addItem(new LogicalItem(row.code(), row.name(), row.size(), row.price()));
+        }
+        for (RawPhysicalRow row : physicalRows) {
+            db.findPhysicalItems(row.logicalCode())
+                    .add(new PhysicalItem(row.logicalCode(), row.suffix(), row.sold()));
+        }
+        for (RawLogicalRow row : logicalRows) {
+            db.findPhysicalItems(row.code()).sort(Comparator.comparingInt(PhysicalItem::suffix));
+        }
     }
 
     /**
@@ -66,7 +76,7 @@ public class StartupLoader {
      * 원문 공백·대소문자 유지. 자원 close 실패까지 시작 오류로 전달.
      * @param path 읽을 데이터 파일 절대 경로
      * @return 원문 행 목록; 마지막 정상 개행 하나는 추가 빈 행이 아님
-     * @throws StartupDataException FILE_READ, FILE_UTF8 또는 FILE_BOM
+     * @throws StartupDataException 읽기 실패, UTF-8 또는 BOM 오류
      */
     private List<String> readStrictLines(Path path) {
         String name = path.getFileName().toString();
@@ -77,17 +87,14 @@ public class StartupLoader {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (lines.isEmpty() && line.startsWith("\uFEFF")) {
-                    throw new StartupDataException(List.of(name), ErrorCode.FILE_BOM,
-                            "BOM 없는 UTF-8 파일이어야 합니다.", OptionalInt.of(lines.size() + 1));
+                    throw new StartupDataException(List.of(name), "BOM 없는 UTF-8 파일이어야 합니다.");
                 }
                 lines.add(line);
             }
         } catch (CharacterCodingException e) {
-            throw new StartupDataException(List.of(name), ErrorCode.FILE_UTF8,
-                    "올바른 UTF-8 파일이어야 합니다.", OptionalInt.empty(), e);
+            throw new StartupDataException(List.of(name), "올바른 UTF-8 파일이어야 합니다.", e);
         } catch (IOException | SecurityException e) {
-            throw new StartupDataException(List.of(name), ErrorCode.FILE_READ,
-                    "데이터 파일을 읽을 수 없습니다.", OptionalInt.empty(), e);
+            throw new StartupDataException(List.of(name), "데이터 파일을 읽을 수 없습니다.", e);
         }
         return lines;
     }

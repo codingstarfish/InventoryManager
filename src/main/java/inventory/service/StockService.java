@@ -1,16 +1,12 @@
 package inventory.service;
 
 import inventory.database.InventoryDatabase;
-import inventory.dto.InventorySnapshot;
 import inventory.dto.StockChangeResult;
 import inventory.dto.StockSummary;
 import inventory.entity.PhysicalItem;
 import inventory.exception.BusinessRuleException;
 import inventory.literal.ErrorCode;
 import inventory.literal.Limits;
-import inventory.validation.DomainRules;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,10 +31,8 @@ public class StockService {
         return db.summarize(code);
     }
 
-    /** 수량 → 상품·코드 여유 → 창고 용량 순서로 검사하며, 부분 입고는 하지 않습니다. */
-    public StockChangeResult receive(String code, int quantity) {
-        DomainRules.validateQuantity(quantity);
-        StockSummary summary = selectInbound(code);
+    /** 선택과 수량 범위 검사를 마친 요청의 접미번호 여유와 용량을 검사한 뒤 입고합니다. */
+    public StockChangeResult receive(StockSummary summary, int quantity) {
         if (quantity > summary.issuable()) {
             throw new BusinessRuleException(ErrorCode.SUFFIX_SHORTAGE, Map.of("issuable", (long) summary.issuable()));
         }
@@ -48,41 +42,30 @@ public class StockService {
             throw new BusinessRuleException(ErrorCode.CAPACITY_SHORTAGE,
                     Map.of("required", required, "remaining", remaining));
         }
-        List<PhysicalItem> rows = new ArrayList<>(db.findPhysicalItems(code));
-        List<String> affected = new ArrayList<>();
+        String code = summary.item().code();
+        List<PhysicalItem> rows = db.findPhysicalItems(code);
         for (int i = 1; i <= quantity; i++) {
-            PhysicalItem row = new PhysicalItem(code, summary.received() + i, false);
-            rows.add(row);
-            affected.add(row.physicalCode());
+            rows.add(new PhysicalItem(code, summary.received() + i, false));
         }
-        saveRows(code, rows);
-        return new StockChangeResult(code, quantity, summary.current() + quantity, affected);
+        db.savePhysical();
+        return new StockChangeResult(quantity, summary.current() + quantity);
     }
 
-    /** 미판매 낱개 중 접미번호가 작은 것부터 판매하며, 기록은 삭제하지 않습니다. */
-    public StockChangeResult sell(String code, int quantity) {
-        DomainRules.validateQuantity(quantity);
-        StockSummary summary = selectSale(code);
+    /** 선택과 수량 범위 검사를 마친 요청의 재고를 확인하고 작은 접미번호부터 판매합니다. */
+    public StockChangeResult sell(StockSummary summary, int quantity) {
         if (quantity > summary.current()) {
             throw new BusinessRuleException(ErrorCode.STOCK_SHORTAGE, Map.of("current", (long) summary.current()));
         }
-        List<PhysicalItem> rows = new ArrayList<>(db.findPhysicalItems(code));
-        List<String> affected = new ArrayList<>();
-        for (int i = 0; i < rows.size() && affected.size() < quantity; i++) {
+        List<PhysicalItem> rows = db.findPhysicalItems(summary.item().code());
+        int sold = 0;
+        for (int i = 0; i < rows.size() && sold < quantity; i++) {
             PhysicalItem row = rows.get(i);
             if (!row.sold()) {
                 rows.set(i, row.markSold());
-                affected.add(row.physicalCode());
+                sold++;
             }
         }
-        saveRows(code, rows);
-        return new StockChangeResult(code, quantity, summary.current() - quantity, affected);
-    }
-
-    private void saveRows(String code, List<PhysicalItem> rows) {
-        InventorySnapshot before = db.snapshot();
-        Map<String, List<PhysicalItem>> physical = new HashMap<>(before.physicalByCode());
-        physical.put(code, rows);
-        db.savePhysical(new InventorySnapshot(before.logicalItems(), physical));
+        db.savePhysical();
+        return new StockChangeResult(quantity, summary.current() - quantity);
     }
 }

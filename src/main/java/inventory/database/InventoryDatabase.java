@@ -1,38 +1,88 @@
 package inventory.database;
 
-import inventory.dto.InventorySnapshot;
-import java.util.Objects;
+import inventory.dto.StockSummary;
+import inventory.dto.WarehouseSummary;
+import inventory.entity.LogicalItem;
+import inventory.entity.PhysicalItem;
+import inventory.exception.BusinessRuleException;
+import inventory.literal.ErrorCode;
+import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-/**
- * 단 하나의 상태 소유자. 모든 Repository·Service·CommitCoordinator가 같은 인스턴스 사용.
- */
+/** 가변 Map과 List로 현재 데이터를 관리하고, 변경한 종류의 파일만 저장합니다. */
 public class InventoryDatabase {
-    /** 전체 프로그램이 공유하는 현재 불변 상태. 가변 snapshot은 이 클래스만 소유. */
-    private InventorySnapshot snapshot;
+    private final Map<String, LogicalItem> logicalItems = new HashMap<>();
+    private final Map<String, List<PhysicalItem>> physicalByCode = new HashMap<>();
+    private final EntityWriter writer;
 
-    /**
-     * StartupLoader가 검증한 초기 상태를 보관합니다.
-     * @param initial 검증·불변 복사를 마친 초기 상태
-     */
-    public InventoryDatabase(InventorySnapshot initial) {
-        this.snapshot = Objects.requireNonNull(initial, "initial");
+    public InventoryDatabase(EntityWriter writer) {
+        this.writer = writer;
     }
 
-    /**
-     * 파일을 읽지 않고 현재 게시된 불변 상태를 반환합니다.
-     * @return 현재 snapshot; 가변 컬렉션 노출 금지
-     */
-    public InventorySnapshot snapshot() {
-        return snapshot;
+    /** 시작 검사 또는 등록 검증을 마친 상품과 빈 낱개 목록을 추가합니다. */
+    public void addItem(LogicalItem item) {
+        logicalItems.put(item.code(), item);
+        physicalByCode.put(item.code(), new ArrayList<>());
     }
 
-    /**
-     * CommitCoordinator만 저장·close 성공 후 호출합니다.
-     * 검증·복사는 저장 전에 완료되어야 하므로 여기서는 상태 참조만 교체합니다.
-     * @param next 검증·불변 복사가 완료된 null 아닌 후보 상태
-     */
-    void publish(InventorySnapshot next) {
-        snapshot = Objects.requireNonNull(next, "next");
+    public int size() {
+        return logicalItems.size();
     }
 
+    public LogicalItem requireItem(String code) {
+        LogicalItem item = logicalItems.get(code);
+        if (item == null) {
+            throw new BusinessRuleException(ErrorCode.CODE_NOT_FOUND, Map.of());
+        }
+        return item;
+    }
+
+    public List<LogicalItem> findAllOrdered() {
+        return logicalItems.values().stream()
+                .sorted(Comparator.comparing(LogicalItem::code)).toList();
+    }
+
+    /** 등록된 상품의 가변 목록. 시작 로딩과 입고·판매가 접미번호 순서를 유지합니다. */
+    public List<PhysicalItem> findPhysicalItems(String code) {
+        return physicalByCode.get(code);
+    }
+
+    public StockSummary summarize(String code) {
+        LogicalItem item = requireItem(code);
+        List<PhysicalItem> rows = findPhysicalItems(code);
+        int sold = 0;
+        for (PhysicalItem row : rows) {
+            if (row.sold()) {
+                sold++;
+            }
+        }
+        return new StockSummary(item, rows.size(), sold);
+    }
+
+    public WarehouseSummary warehouse() {
+        long used = 0;
+        for (LogicalItem item : logicalItems.values()) {
+            for (PhysicalItem row : findPhysicalItems(item.code())) {
+                if (!row.sold()) {
+                    used += item.size();
+                }
+            }
+        }
+        return new WarehouseSummary(used);
+    }
+
+    /** 등록에서만 호출하며, 물리 파일은 저장하지 않습니다. */
+    public void saveLogical() {
+        writer.writeLogical(logicalItems.values());
+    }
+
+    /** 입고·판매에서만 호출하며, 논리 파일은 저장하지 않습니다. */
+    public void savePhysical() {
+        List<PhysicalItem> rows = physicalByCode.values().stream()
+                .flatMap(List::stream).toList();
+        writer.writePhysical(rows);
+    }
 }

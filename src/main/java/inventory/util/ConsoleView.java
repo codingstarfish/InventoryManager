@@ -6,7 +6,7 @@ import inventory.literal.ErrorCode;
 import inventory.literal.Field;
 import inventory.dto.AllInventoryResult;
 import inventory.dto.ItemDetail;
-import inventory.dto.RegisterResult;
+import inventory.entity.LogicalItem;
 import inventory.dto.StockChangeResult;
 import inventory.dto.StockSummary;
 import inventory.exception.StartupDataException;
@@ -56,9 +56,8 @@ public class ConsoleView {
      * SALE_QUANTITY: ConvenienceStore: 판매 수량 >
      * QUERY_MODE: ConvenienceStore: 조회 방식(1: 전체, 2: 단일) >
      * RETRY: ConvenienceStore: 다시 입력하시겠습니까? (y/n) >
-     * 프롬프트 뒤 한 칸 공백, 즉시 flush. MENU는 mainMenu, LOGICAL_CODE는 promptCode 사용.
+     * 프롬프트 뒤 한 칸 공백, 즉시 flush. 주 메뉴는 mainMenu, 코드는 promptCode 사용.
      * @param field 위 부 프롬프트 중 하나
-     * @throws IllegalArgumentException MENU 또는 LOGICAL_CODE를 직접 전달
      */
     public void prompt(Field field) {
         Objects.requireNonNull(field, "field");
@@ -70,7 +69,6 @@ public class ConsoleView {
             case SALE_QUANTITY -> "판매 수량";
             case QUERY_MODE -> "조회 방식(1: 전체, 2: 단일)";
             case RETRY -> "다시 입력하시겠습니까? (y/n)";
-            default -> throw new IllegalArgumentException("mainMenu 또는 promptCode를 사용해야 합니다.");
         };
         out.print("ConvenienceStore: " + text + " > ");
         out.flush();
@@ -98,14 +96,10 @@ public class ConsoleView {
      * ErrorCode 사전의 입력·업무 메시지를 출력. 화면 이동은 Console 담당.
      * 필수 details: SUFFIX_SHORTAGE=issuable, CAPACITY_SHORTAGE=required/remaining,
      * STOCK_SHORTAGE=current. 일반 정수는 선행 0·쉼표·부호 없이 출력.
-     * 필수 값 누락을 0으로 대체하지 않습니다.
      * @param code 입력·업무 오류 코드
      * @param details 필수 long 상세값 또는 Map.of()
-     * @throws IllegalArgumentException 필수 key 누락 또는 잘못된 오류 코드
      */
     public void error(ErrorCode code, Map<String, Long> details) {
-        Objects.requireNonNull(code, "code");
-        Objects.requireNonNull(details, "details");
         String message = switch (code) {
             case MENU_SYNTAX -> "메뉴는 1~5 중 하나를 입력해야 합니다.";
             case NAME_SYNTAX -> "상품명은 완성형 한글, 영문, 숫자, 공백으로 구성된 1~30자여야 합니다.";
@@ -121,15 +115,14 @@ public class ConsoleView {
             case LIMIT_PHYSICAL_CODE -> "해당 상품의 물리적 상품코드가 소진되어 입고할 수 없습니다.";
             case INBOUND_SYNTAX -> "입고 수량은 숫자 1~10자리로 입력해야 합니다.";
             case INBOUND_RANGE -> "입고 수량은 1~100개여야 합니다.";
-            case SUFFIX_SHORTAGE -> "물리적 상품코드가 부족합니다. (발급 가능 수: " + detail(details, "issuable") + "개)";
+            case SUFFIX_SHORTAGE -> "물리적 상품코드가 부족합니다. (발급 가능 수: " + details.get("issuable") + "개)";
             case CAPACITY_SHORTAGE -> "창고의 남은 용량이 부족합니다. (필요 용량: "
-                    + detail(details, "required") + ", 남은 용량: " + detail(details, "remaining") + ")";
+                    + details.get("required") + ", 남은 용량: " + details.get("remaining") + ")";
             case SALE_SYNTAX -> "판매 수량은 숫자 1~10자리로 입력해야 합니다.";
             case SALE_RANGE -> "판매 수량은 1~100개여야 합니다.";
-            case STOCK_SHORTAGE -> "재고가 부족합니다. (현재 재고: " + detail(details, "current") + "개)";
+            case STOCK_SHORTAGE -> "재고가 부족합니다. (현재 재고: " + details.get("current") + "개)";
             case QUERY_MODE_SYNTAX -> "조회 방식은 1 또는 2를 입력해야 합니다.";
             case RETRY_SYNTAX -> "y 또는 n을 입력해야 합니다.";
-            default -> throw new IllegalArgumentException("입력·업무 오류 코드가 아닙니다: " + code);
         };
         line(message);
     }
@@ -161,10 +154,9 @@ public class ConsoleView {
     /**
      * 신규 상품이 등록되었습니다.
      * 논리코드: {코드}, 상품명: {상품명}, 크기: {크기}, 가격: {가격}원, 현재 재고: 0개
-     * @param result 논리 파일 저장·close·게시 후 받은 결과
+     * @param item 논리 파일 저장을 완료한 상품
      */
-    public void registered(RegisterResult result) {
-        var item = result.item();
+    public void registered(LogicalItem item) {
         line("신규 상품이 등록되었습니다.");
         line("논리코드: " + item.code() + ", 상품명: " + item.name()
                 + ", 크기: " + item.size() + ", 가격: " + item.price() + "원, 현재 재고: 0개");
@@ -172,8 +164,7 @@ public class ConsoleView {
 
     /**
      * 입고가 완료되었습니다. (입고 수량: {quantity}개, 현재 재고: {currentAfter}개)
-     * affectedCodes를 추가 출력하지 않습니다.
-     * @param result 물리 파일 저장·close·게시 후 입고 결과
+     * @param result 물리 파일 저장·close 후 입고 결과
      */
     public void received(StockChangeResult result) {
         line("입고가 완료되었습니다. (입고 수량: " + result.quantity()
@@ -182,8 +173,7 @@ public class ConsoleView {
 
     /**
      * 판매가 완료되었습니다. (판매 수량: {quantity}개, 현재 재고: {currentAfter}개)
-     * affectedCodes를 추가 출력하지 않습니다.
-     * @param result 물리 파일 저장·close·게시 후 판매 결과
+     * @param result 물리 파일 저장·close 후 판매 결과
      */
     public void sold(StockChangeResult result) {
         line("판매가 완료되었습니다. (판매 수량: " + result.quantity()
@@ -261,7 +251,7 @@ public class ConsoleView {
      * 관계 오류도 해당 파일명을 표시하며, 필요한 경우 두 파일명을 함께 표시.
      * 특정 필드 오류는 필드명과 허용 규칙, 관계 오류는 위반한 규칙을 표시.
      * 이후 데이터 파일 오류로 프로그램을 종료합니다. 출력. Main이 종료 1 처리.
-     * @param e 파일명·코드·구체 이유·선택 행 번호를 가진 시작 예외
+     * @param e 문제 파일명과 구체 이유를 가진 시작 예외
      */
     public void startupFailed(StartupDataException e) {
         line("[오류] " + String.join(" / ", e.fileNames()) + ": " + e.reason());
@@ -298,14 +288,6 @@ public class ConsoleView {
      */
     public void eofExit() {
         line("입력이 종료되어 프로그램을 종료합니다.");
-    }
-
-    private long detail(Map<String, Long> details, String key) {
-        Long value = details.get(key);
-        if (value == null || value < 0) {
-            throw new IllegalArgumentException("필수 상세값 누락 또는 잘못된 값: " + key);
-        }
-        return value;
     }
 
     private void line(String text) {

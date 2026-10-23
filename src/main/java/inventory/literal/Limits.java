@@ -34,6 +34,12 @@ public final class Limits {
     /** 최대 요청 수량 */
     public static final int MAX_QUANTITY = 100;
 
+    /** 상품명 코드 포인트 길이 */
+    public static final int MAX_NAME_LENGTH = 30;
+
+    /** 사용자 숫자 입력 최대 자릿수 */
+    public static final int MAX_INPUT_DIGITS = 10;
+
     private Limits() {
     }
 }

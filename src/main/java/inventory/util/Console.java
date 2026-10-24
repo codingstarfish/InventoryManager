@@ -51,7 +51,7 @@ public class Console {
     /**
      * 주 메뉴를 반복 표시하고 선택한 작업을 실행합니다. EOF와 저장 실패는 안내 후 반복을 끝내며 프로세스 종료는 호출한 Main에서 수행
      * @return 정상 종료나 EOF이면 0이며, 파일 저장 실패이면 1인 종료 코드
-     * @throws IOException 입력 또는 파일 입출력이 실패하면 던짐
+     * @throws IOException 입력을 읽는 도중 오류가 발생하면 던짐
      */
     public int run() throws IOException {
         try {
@@ -87,7 +87,7 @@ public class Console {
 
     /**
      * 등록 가능 여부를 확인하고 상품명, 크기, 가격 순서로 입력받아 저장, 재입력 시 앞 단계의 정상 값은 유지하며 취소 시 임시 값을 폐기
-     * @throws IOException 입력 또는 파일 입출력이 실패하면 던짐
+     * @throws IOException 입력을 읽는 도중 오류가 발생하면 던짐
      * @throws inventory.exception.EndOfInputException 입력 중 EOF를 확인하면 상위 실행 흐름에 던짐
      * @throws inventory.exception.SaveFailureException 작업 결과의 파일 저장이 실패하면 상위 실행 흐름에 던짐
      */
@@ -113,7 +113,7 @@ public class Console {
 
     /**
      * 입고 대상과 수량을 입력받아 입고합니다. 접미번호가 소진되었으면 수량 입력 없이 돌아가며 수량 오류 시 선택한 상품을 유지하여 재입력받음
-     * @throws IOException 입력 또는 파일 입출력이 실패하면 전달
+     * @throws IOException 입력을 읽는 도중 오류가 발생하면 전달
      * @throws inventory.exception.EndOfInputException 입력 중 EOF를 확인하면 상위 실행 흐름에 전달
      * @throws inventory.exception.SaveFailureException 작업 결과의 파일 저장이 실패하면 상위 실행 흐름에 전달
      */
@@ -134,7 +134,7 @@ public class Console {
 
     /**
      * 판매 대상과 수량을 입력받아 판매함. 현재 재고가 0개여도 수량을 입력받으며 수량 오류 시 선택한 상품을 유지
-     * @throws IOException 입력 또는 파일 입출력이 실패하면 던짐
+     * @throws IOException 입력을 읽는 도중 오류가 발생하면 던짐
      * @throws inventory.exception.EndOfInputException 입력 중 EOF를 확인하면 상위 실행 흐름에 던짐
      * @throws inventory.exception.SaveFailureException 작업 결과의 파일 저장이 실패하면 상위 실행 흐름에 던짐
      */
@@ -155,7 +155,7 @@ public class Console {
 
     /**
      * 상품 유무와 관계없이 조회 방식을 입력받아 전체 또는 단일 상품 결과를 출력, 결과 출력 후 추가 입력 없이 돌아감
-     * @throws IOException 입력 또는 파일 입출력이 실패하면 던짐
+     * @throws IOException 입력을 읽는 도중 오류가 발생하면 던짐
      * @throws inventory.exception.EndOfInputException 입력 중 EOF를 확인하면 상위 실행 흐름에 던짐
      */
     private void queryMenu() throws IOException {
@@ -174,7 +174,7 @@ public class Console {
     /**
      * 올바른 소문자 y 또는 n을 입력할 때까지 같은 확인 프롬프트를 반복
      * @return 현재 단계의 재입력을 선택하면 true, 작업 전체의 취소를 선택하면 false
-     * @throws IOException 입력 또는 파일 입출력이 실패하면 던짐
+     * @throws IOException 입력을 읽는 도중 오류가 발생하면 던짐
      * @throws inventory.exception.EndOfInputException 입력 중 EOF를 확인하면 상위 실행 흐름에 던짐
      */
     private boolean askRetry() throws IOException {

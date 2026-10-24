@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import inventory.exception.StartupDataException;
 
 /**
- * 시작 파일 생성,접근 확인,경로 제공함,  현재 작업 디렉터리는 /data 기준.
+ * * 시작 시 데이터 파일 생성과 접근 확인을 수행하고, 작업 디렉터리 아래 data 폴더의 경로를 제공
  */
 public class FileAccess {
     /** 실제 작업 디렉터리 */
@@ -22,8 +22,8 @@ public class FileAccess {
     }
 
     /**
-     *존재하지 않는 두 데이터 파일만 생성, 기존 파일은 유지
-     * @throws StartupDataException 파일 생성·접근 또는 문법·의미 검사에서 오류를 확인하면 던짐
+     * 존재하지 않는 data 디렉터리와 빈 데이터 파일을 생성하며, 기존 파일은 유지
+     * @throws StartupDataException 디렉터리 또는 파일 생성에 실패하면 던짐
      */
     public void ensureDataFiles() {
         Path data = workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR);
@@ -47,7 +47,7 @@ public class FileAccess {
 
     /**
      * 두 데이터 경로가 일반 파일이며 읽기와 쓰기가 가능한지 확인
-     * @throws StartupDataException 파일 생성·접근 또는 문법·의미 검사에서 오류를 확인하면 던짐
+     * @throws StartupDataException 경로가 일반 파일이 아니거나 읽기,쓰기 접근이 불가능하면 던집니다.
      */
     public void checkReadableWritable() {
         for (Path path : List.of(logicalPath(), physicalPath())) {

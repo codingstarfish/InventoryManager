@@ -26,7 +26,7 @@ public class FileIntegrityValidator {
      * 두 파일의 문법 검사가 끝난 행에 대해 범위, 중복, 연속성, 등록 참조, FIFO와 창고 용량을 검사
      * @param logicalRows 논리 파일의 문법 검사를 통과한 전체 행 목록, 빈 목록도 허용하며 의미 오류 값은 포함될 수 있음
      * @param physicalRows 물리 파일의 문법 검사를 통과한 전체 행 목록, 판매된 행도 포함하며 빈 목록도 허용
-     * @throws StartupDataException 파일 생성,접근 또는 문법,의미 검사에서 오류를 확인하면 전달
+     * @throws StartupDataException 값 범위, 가격 단위, 중복, 연속성, 참조, FIFO 또는 창고 용량 규칙을 위반하면 전달
      */
     public void validate(List<RawLogicalRow> logicalRows, List<RawPhysicalRow> physicalRows) {
         Map<String, RawLogicalRow> logical = new TreeMap<>();

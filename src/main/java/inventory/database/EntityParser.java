@@ -6,7 +6,7 @@ import java.util.List;
 import inventory.exception.StartupDataException;
 
 /**
- * 문법 단계 전용 순수 변환기. Entity를 생성해 의미 검사 우선순위 유지시킴
+ * 문법 단계 전용 순수 변환기. Entity 대신 중간 행 객체를 생성해 문법 검사와 의미 검사를 분리
  */
 public class EntityParser {
 
@@ -17,7 +17,7 @@ public class EntityParser {
      * 빈 행과 필드 수를 확인하고 상품명, 논리코드, 크기, 가격 순서로 문법을 검사하되 값의 범위나 관계는 검사 안함
      * @param line 개행을 제외한 논리 파일의 원문 한 행, 필드 순서는 상품명,논리코드,크기,가격
      * @return 상품명,논리코드,크기,가격을 담은 중간 행 객체로, P00000, 크기 1001, 가격 1 등 의미 검사가 필요한 값도 유지
-     * @throws StartupDataException 파일 생성·접근 또는 문법·의미 검사에서 오류를 확인하면 던짐
+     * @throws StartupDataException 빈 행, 필드 수 또는 필드 문법에 오류가 있으면 던짐
      */
     public RawLogicalRow parseLogicalSyntax(String line) {
         String file = DataPaths.LOGICAL_FILE;
@@ -45,7 +45,7 @@ public class EntityParser {
      * 빈 행과 필드 수를 확인하고 논리코드, 세 자리 접미번호, 판매여부의 문법을 검사, 등록 참조와 FIFO는 검사하지 안함
      * @param line 개행을 제외한 물리 파일의 원문 한 행, 필드 순서는 논리코드,접미번호,판매여부
      * @return 논리코드,접미번호,판매 상태를 담은 중간 행 객체, 판매여부 0은 false, 1은 true로 변환하며 접미번호 000도 의미 검사 전까지 유지
-     * @throws StartupDataException 파일 생성,접근 및 문법,의미검사에서 오류를 확인시 던짐
+     * @throws StartupDataException 빈 행, 필드 수 또는 필드 문법에 오류가 있으면 던짐
      */
     public RawPhysicalRow parsePhysicalSyntax(String line) {
         String file = DataPaths.PHYSICAL_FILE;

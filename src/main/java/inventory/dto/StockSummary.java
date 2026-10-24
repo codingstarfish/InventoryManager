@@ -4,7 +4,7 @@ import inventory.entity.LogicalItem;
 import inventory.literal.Limits;
 import java.util.OptionalInt;
 
-/** 상품별 누적 입고·판매 수량. 나머지 수량은 이 두 값으로 계산합니다. */
+//한 LogicalItem 요약
 public record StockSummary(LogicalItem item, int received, int sold) {
     public int current() {
         return received - sold;

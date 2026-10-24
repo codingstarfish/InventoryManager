@@ -1,6 +1,5 @@
 package inventory.database;
 
-import inventory.dto.InventorySnapshot;
 import inventory.dto.StockSummary;
 import inventory.dto.WarehouseSummary;
 import inventory.entity.LogicalItem;
@@ -8,43 +7,48 @@ import inventory.entity.PhysicalItem;
 import inventory.exception.BusinessRuleException;
 import inventory.literal.ErrorCode;
 import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** 공유 상태의 조회와 저장. 파일 저장이 성공한 뒤에만 현재 상태를 교체합니다. */
+/** 가변 Map과 List로 현재 데이터를 관리하고, 변경한 종류의 파일만 저장합니다. */
 public class InventoryDatabase {
-    private InventorySnapshot snapshot;
+    private final Map<String, LogicalItem> logicalItems = new HashMap<>();
+    private final Map<String, List<PhysicalItem>> physicalByCode = new HashMap<>();
     private final EntityWriter writer;
 
-    public InventoryDatabase(InventorySnapshot initial, EntityWriter writer) {
-        this.snapshot = initial;
+    public InventoryDatabase(EntityWriter writer) {
         this.writer = writer;
     }
 
-    public InventorySnapshot snapshot() {
-        return snapshot;
+    /** 시작 검사 또는 등록 검증을 마친 상품과 빈 낱개 목록을 추가합니다. */
+    public void addItem(LogicalItem item) {
+        logicalItems.put(item.code(), item);
+        physicalByCode.put(item.code(), new ArrayList<>());
     }
 
     public int size() {
-        return snapshot.logicalItems().size();
+        return logicalItems.size();
     }
 
     public LogicalItem requireItem(String code) {
-        LogicalItem item = snapshot.logicalItems().get(code);
+        LogicalItem item = logicalItems.get(code);
         if (item == null) {
             throw new BusinessRuleException(ErrorCode.CODE_NOT_FOUND, Map.of());
         }
         return item;
     }
 
+    //logical code로 sort한 결과 반환
     public List<LogicalItem> findAllOrdered() {
-        return snapshot.logicalItems().values().stream()
+        return logicalItems.values().stream()
                 .sorted(Comparator.comparing(LogicalItem::code)).toList();
     }
 
-    /** 시작 검사와 입고·판매가 목록의 접미번호 순서를 유지합니다. */
+    /** 등록된 상품의 가변 목록. 시작 로딩과 입고·판매가 접미번호 순서를 유지합니다. */
     public List<PhysicalItem> findPhysicalItems(String code) {
-        return snapshot.physicalByCode().getOrDefault(code, List.of());
+        return physicalByCode.get(code);
     }
 
     public StockSummary summarize(String code) {
@@ -61,7 +65,7 @@ public class InventoryDatabase {
 
     public WarehouseSummary warehouse() {
         long used = 0;
-        for (LogicalItem item : snapshot.logicalItems().values()) {
+        for (LogicalItem item : logicalItems.values()) {
             for (PhysicalItem row : findPhysicalItems(item.code())) {
                 if (!row.sold()) {
                     used += item.size();
@@ -72,16 +76,14 @@ public class InventoryDatabase {
     }
 
     /** 등록에서만 호출하며, 물리 파일은 저장하지 않습니다. */
-    public void saveLogical(InventorySnapshot candidate) {
-        writer.writeLogical(List.copyOf(candidate.logicalItems().values()));
-        snapshot = candidate;
+    public void saveLogical() {
+        writer.writeLogical(logicalItems.values());
     }
 
     /** 입고·판매에서만 호출하며, 논리 파일은 저장하지 않습니다. */
-    public void savePhysical(InventorySnapshot candidate) {
-        List<PhysicalItem> rows = candidate.physicalByCode().values().stream()
+    public void savePhysical() {
+        List<PhysicalItem> rows = physicalByCode.values().stream()
                 .flatMap(List::stream).toList();
         writer.writePhysical(rows);
-        snapshot = candidate;
     }
 }

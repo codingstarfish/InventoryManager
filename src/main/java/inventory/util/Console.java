@@ -17,41 +17,26 @@ import inventory.service.ProductService;
 import inventory.service.StockService;
 import inventory.service.QueryService;
 import java.io.IOException;
-import java.util.Objects;
 
 /**
  * 메뉴와 재입력 흐름만 소유. 임시 입력은 각 메뉴의 지역 변수. 파일 쓰기·가변 재고 소유 없음.
  */
 public class Console {
-    /** 사용자 입력 채널 */
     private final Input input;
-    /** 입력 전용 검증 */
     private final InputValidator validator;
-    /** 공유 db의 등록·존재 확인 */
     private final ProductService productService;
-    /** 공유 db의 입고·판매 */
     private final StockService stockService;
-    /** 공유 db의 조회 */
     private final QueryService queryService;
-    /** 화면 출력 담당 */
     private final ConsoleView view;
 
-    /**
-     * 의존 부품을 보관합니다. 생성 시 입력·출력·파일 작업 없음.
-     * @param input 사용자 입력 채널
-     * @param validator 입력 전용 검증
-     * @param productService 공유 db의 등록·존재 확인
-     * @param stockService 공유 db의 입고·판매
-     * @param queryService 공유 db의 조회
-     * @param view 화면 출력 담당
-     */
+    
     public Console(Input input, InputValidator validator, ProductService productService, StockService stockService, QueryService queryService, ConsoleView view) {
-        this.input = Objects.requireNonNull(input, "input");
-        this.validator = Objects.requireNonNull(validator, "validator");
-        this.productService = Objects.requireNonNull(productService, "productService");
-        this.stockService = Objects.requireNonNull(stockService, "stockService");
-        this.queryService = Objects.requireNonNull(queryService, "queryService");
-        this.view = Objects.requireNonNull(view, "view");
+        this.input = input;
+        this.validator = validator;
+        this.productService = productService;
+        this.stockService = stockService;
+        this.queryService = queryService;
+        this.view = view;
     }
 
     /**
@@ -71,7 +56,7 @@ public class Console {
                 try {
                     menu = validator.parseMainMenu(input.readLine());
                 } catch (UserInputException e) {
-                    view.error(e.code(), e.details());
+                    view.error(e.code(), Map.of());
                     continue;
                 }
                 switch (menu) {
@@ -121,14 +106,7 @@ public class Console {
         if (price.isEmpty()) {
             return;
         }
-        try {
-            view.registered(productService.register(name.get(), size.get(), price.get()));
-        } catch (BusinessRuleException e) {
-            if (e.code() != ErrorCode.LIMIT_LOGICAL_CODE) {
-                throw e;
-            }
-            view.error(e.code(), e.details());
-        }
+        view.registered(productService.register(name.get(), size.get(), price.get()));
     }
 
     /**
@@ -152,7 +130,7 @@ public class Console {
         }
         StockSummary summary = selected.get();
         view.selected(summary);
-        readValue(Field.INBOUND_QUANTITY, raw -> stockService.receive(summary.item().code(),
+        readValue(Field.INBOUND_QUANTITY, raw -> stockService.receive(summary,
                 validator.parseQuantity(raw, Field.INBOUND_QUANTITY))).ifPresent(view::received);
     }
 
@@ -176,7 +154,7 @@ public class Console {
         }
         StockSummary summary = selected.get();
         view.selected(summary);
-        readValue(Field.SALE_QUANTITY, raw -> stockService.sell(summary.item().code(),
+        readValue(Field.SALE_QUANTITY, raw -> stockService.sell(summary,
                 validator.parseQuantity(raw, Field.SALE_QUANTITY))).ifPresent(view::sold);
     }
 
@@ -214,7 +192,7 @@ public class Console {
             try {
                 return validator.parseRetry(input.readLine());
             } catch (UserInputException e) {
-                view.error(e.code(), e.details());
+                view.error(e.code(), Map.of());
             }
         }
     }
@@ -226,7 +204,7 @@ public class Console {
             try {
                 return Optional.of(parse.apply(input.readLine()));
             } catch (UserInputException e) {
-                view.error(e.code(), e.details());
+                view.error(e.code(), Map.of());
             } catch (BusinessRuleException e) {
                 boolean retryable = field == Field.INBOUND_QUANTITY
                         && (e.code() == ErrorCode.SUFFIX_SHORTAGE || e.code() == ErrorCode.CAPACITY_SHORTAGE)
@@ -251,7 +229,7 @@ public class Console {
                 String code = validator.parseLogicalCode(input.readLine());
                 return Optional.of(select.apply(code));
             } catch (UserInputException e) {
-                view.error(e.code(), e.details());
+                view.error(e.code(), Map.of());
             } catch (BusinessRuleException e) {
                 view.error(e.code(), e.details());
                 if (purpose == CodePurpose.INBOUND && e.code() == ErrorCode.LIMIT_PHYSICAL_CODE) {

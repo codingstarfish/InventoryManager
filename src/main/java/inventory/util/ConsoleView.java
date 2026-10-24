@@ -19,11 +19,18 @@ public class ConsoleView {
     
     private final PrintWriter out;
 
+    /**
+     * 화면 안내를 기록할 출력 채널
+     * @param out UTF-8 표준 출력 또는 테스트용 문자열 출력을 처리하는 PrintWriter
+     */
     public ConsoleView(PrintWriter out) {
         this.out = out;
     }
 
     
+    /**
+     * 주 메뉴와 주 프롬프트를 출력하고 출력 버퍼를 비움
+     */
     public void mainMenu() {
         out.println("==================================================");
         out.println("        편의점 재고 관리 시스템 (v1.0)");
@@ -38,7 +45,10 @@ public class ConsoleView {
         out.flush();
     }
 
-    // 필드에 따른 출력
+    /**
+     * 지정한 입력 항목에 해당하는 부 프롬프트를 출력
+     * @param field 상품명, 크기, 가격, 입고·판매 수량, 조회 방식 또는 재입력 확인 중 출력할 항목
+     */
     public void prompt(Field field) {
         String text = switch (field) {
             case NAME -> "신규 상품명";
@@ -53,7 +63,10 @@ public class ConsoleView {
         out.flush();
     }
 
-    // 코드 입력 관련 출력
+    /**
+     * 입고·판매·조회 목적에 맞는 논리코드 입력 프롬프트를 출력
+     * @param purpose 논리코드를 입력받는 목적, INBOUND, SALE, QUERY 중 하나
+     */
     public void promptCode(CodePurpose purpose) {
         String text = switch (purpose) {
             case INBOUND -> "입고할 논리적 상품코드";
@@ -64,7 +77,12 @@ public class ConsoleView {
         out.flush();
     }
 
-    // 에러별 출력
+    /**
+     * 오류 코드에 대응하는 구체적인 안내 문구를 출력
+     * @param code 입력 문법, 값 범위 또는 업무 조건 위반을 나타내는 오류 코드
+     * @param details 오류 문구에 넣을 수치,
+     * 접미번호 부족은 issuable, 용량 부족은 required와 remaining, 재고 부족은 current를 사용하며 나머지는 빈 Map
+     */
     public void error(ErrorCode code, Map<String, Long> details) {
         String message = switch (code) {
             case MENU_SYNTAX -> "메뉴는 1~5 중 하나를 입력해야 합니다.";
@@ -94,6 +112,10 @@ public class ConsoleView {
     }
 
     
+    /**
+     * 등록된 상품이 없어 입고 또는 판매를 수행할 수 없다는 안내를 출력
+     * @param purpose 차단된 작업의 목적, INBOUND 또는 SALE을 사용하며 QUERY는 허용하지 않음
+     */
     public void noProducts(CodePurpose purpose) {
         switch (purpose) {
             case INBOUND -> line("등록된 상품이 없어 입고할 수 없습니다. 먼저 상품을 등록해야 합니다.");
@@ -103,15 +125,16 @@ public class ConsoleView {
     }
 
     /**
-     * 상품명: {상품명}, 현재 재고: {current}개
+     * 선택한 상품의 이름과 현재 재고 수량을 출력
+     * @param summary 입고 또는 판매 대상으로 선택한 상품의 최신 재고 요약
      */
     public void selected(StockSummary summary) {
         line("상품명: " + summary.item().name() + ", 현재 재고: " + summary.current() + "개");
     }
 
     /**
-     * 신규 상품이 등록되었습니다.
-     * 논리코드: {코드}, 상품명: {상품명}, 크기: {크기}, 가격: {가격}원, 현재 재고: 0개
+     * 등록 완료 안내와 신규 상품 정보 및 현재 재고 0개를 출력
+     * @param item 논리 파일에 저장을 마친 신규 등록 상품
      */
     public void registered(LogicalItem item) {
         line("신규 상품이 등록되었습니다.");
@@ -120,7 +143,8 @@ public class ConsoleView {
     }
 
     /**
-     * 입고가 완료되었습니다. (입고 수량: {quantity}개, 현재 재고: {currentAfter}개)
+     * 입고 완료 안내와 실제 입고 수량 및 입고 후 현재 재고를 출력
+     * @param result 물리 파일 저장까지 성공한 입고 처리의 수량 결과
      */
     public void received(StockChangeResult result) {
         line("입고가 완료되었습니다. (입고 수량: " + result.quantity()
@@ -128,7 +152,8 @@ public class ConsoleView {
     }
 
     /**
-     * 판매가 완료되었습니다. (판매 수량: {quantity}개, 현재 재고: {currentAfter}개)
+     * 판매 완료 안내와 실제 판매 수량 및 판매 후 현재 재고를 출력
+     * @param result 물리 파일 저장까지 성공한 판매 처리의 수량 결과
      */
     public void sold(StockChangeResult result) {
         line("판매가 완료되었습니다. (판매 수량: " + result.quantity()
@@ -136,9 +161,8 @@ public class ConsoleView {
     }
 
     /**
-     * 각 상품을 논리코드순으로 formatSummary 결과 한 줄씩 출력.
-     * 상품 없으면 등록된 상품이 없습니다. 출력.
-     * 창고 사용 용량: {used}, 남은 용량: {remaining} 출력.
+     * 상품별 요약을 전달된 순서로 출력한 뒤 창고 사용·남은 용량을 출력합니다. 상품이 없으면 빈 목록 안내를 출력
+     * @param result 논리코드순 상품 요약 목록과 창고 용량을 담은 전체 조회 결과
      */
     public void allInventory(AllInventoryResult result) {
         if (result.items().isEmpty()) {
@@ -151,9 +175,8 @@ public class ConsoleView {
     }
 
     /**
-     * 상품 formatSummary 출력
-     * 접미번호 순으로 물리코드: {전체 물리코드}, 판매여부: {0 또는 1}
-     * 낱개 없으면 입고된 물리적 상품이 없습니다. 출력
+     * 상품 요약과 전체 낱개의 물리코드·판매여부를 출력합니다. 낱개가 없으면 입고 기록이 없다는 안내를 출력
+     * @param result 선택 상품의 요약과 판매 완료 행까지 포함한 접미번호순 낱개 목록
      */
     public void itemDetail(ItemDetail result) {
         line(formatSummary(result.summary()));
@@ -166,9 +189,9 @@ public class ConsoleView {
     }
 
     /**
-     * 논리코드: {코드}, 상품명: {상품명}, 크기: {크기}, 가격: {가격}원,
-     * 누적 입고: {H}개, 누적 판매: {T}개, 현재 재고: {Q}개,
-     * 발급 가능 수: {A}개, 다음 접미번호: {세 자리 번호 또는 없음}
+     * 상품 정보와 누적 수량, 현재 재고, 발급 가능 수 및 다음 접미번호를 한 줄로 조합
+     * @param summary 화면에 표시할 상품 정보와 누적 입고·판매 수량을 제공하는 요약 객체
+     * @return 상품 한 종류의 조회 결과 문자열로, 다음 접미번호는 세 자리이며 소진되었으면 없음으로 표시
      */
     private String formatSummary(StockSummary summary) {
         var item = summary.item();
@@ -182,41 +205,76 @@ public class ConsoleView {
     }
 
     
+    /**
+     * 데이터 파일 검사를 시작한다는 안내를 출력합니다.
+     * <p>인자는 없습니다.</p>
+     * <p>반환값은 없습니다.</p>
+     */
     public void startupChecking() {
         line("[INFO] 데이터 파일 검사를 진행합니다.");
     }
 
+    /**
+     * 무결성 검사 완료와 프로그램 시작 안내를 출력합니다.
+     * <p>인자는 없습니다.</p>
+     * <p>반환값은 없습니다.</p>
+     */
     public void startupPassed() {
         line("[INFO] 무결성 검사 완료. 프로그램을 시작합니다.");
     }
 
     /**
-     * [오류] {파일명}: {구체적인 이유} 출력.
-     * 관계 오류도 해당 파일명을 표시하며, 필요한 경우 두 파일명을 함께 표시.
-     * 특정 필드 오류는 필드명과 허용 규칙, 관계 오류는 위반한 규칙을 표시.
+     * 시작 검사에 실패한 파일명과 구체적인 이유 및 종료 안내를 출력합니다.
+     * <p>반환값은 없습니다.</p>
+     * @param e 시작 파일 생성·접근·문법·의미 검사에서 전달된 예외입니다. 오류 파일명과 이유를 사용합니다.
      */
     public void startupFailed(StartupDataException e) {
         line("[오류] " + String.join(" / ", e.fileNames()) + ": " + e.reason());
         line("데이터 파일 오류로 프로그램을 종료합니다.");
     }
 
+    /**
+     * 저장에 실패한 파일명과 작업 실패 및 종료 안내를 출력합니다.
+     * <p>반환값은 없습니다.</p>
+     * @param e 논리 파일 또는 물리 파일을 저장하는 도중 발생한 예외입니다. 저장 대상 파일명을 사용합니다.
+     */
     public void saveFailed(SaveFailureException e) {
         line("[오류] " + e.fileName() + " 저장에 실패했습니다. 작업을 완료하지 못했습니다.");
         line("프로그램을 종료합니다.");
     }
 
+    /**
+     * 사용자가 현재 작업을 취소했다는 안내를 출력합니다.
+     * <p>인자는 없습니다.</p>
+     * <p>반환값은 없습니다.</p>
+     */
     public void cancelled() {
         line("작업을 취소했습니다.");
     }
 
+    /**
+     * 사용자의 종료 메뉴 선택에 따른 정상 종료 안내를 출력합니다.
+     * <p>인자는 없습니다.</p>
+     * <p>반환값은 없습니다.</p>
+     */
     public void normalExit() {
         line("프로그램을 종료합니다.");
     }
 
+    /**
+     * 입력 종료 EOF로 프로그램을 종료한다는 안내를 출력합니다.
+     * <p>인자는 없습니다.</p>
+     * <p>반환값은 없습니다.</p>
+     */
     public void eofExit() {
         line("입력이 종료되어 프로그램을 종료합니다.");
     }
 
+    /**
+     * 문자열 뒤에 개행을 붙여 출력하고 출력 버퍼를 비웁니다.
+     * <p>반환값은 없습니다.</p>
+     * @param text 화면에 한 줄로 출력할 안내 또는 결과 문자열입니다.
+     */
     private void line(String text) {
         out.println(text);
         out.flush();

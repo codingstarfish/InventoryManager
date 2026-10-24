@@ -17,16 +17,20 @@ import inventory.exception.StartupDataException;
 import inventory.validation.FileIntegrityValidator;
 
 /**
- * 시작 단계 조율. 생성자는 파일을 읽지 않습니다.
+ * 시작 단계
  */
 public class StartupLoader {
-    /** 시작 생성·접근 및 경로 */
+    /** 시작 생성,접근 및 경로 */
     private final FileAccess access;
     /** 문법 단계 변환 */
     private final EntityParser parser;
     /** 의미·관계 검사 */
     private final FileIntegrityValidator validator;
 
+    /**
+     * 파일 접근 도구를 보관하고 문법,의미 검증기를 생성
+     * @param access 작업 디렉터리 아래의 데이터 경로와 생성,접근 검사를 제공하는 도구
+     */
     public StartupLoader(FileAccess access) {
         this.access = access;
         this.parser = new EntityParser();
@@ -34,12 +38,10 @@ public class StartupLoader {
     }
 
     /**
-     * ensureDataFiles → checkReadableWritable → 양쪽 readStrictLines 및 전체 문법 검사
-     * → 의미·관계 검사 → 검증된 데이터를 DB에 적재합니다.
-     * 양쪽 파일 문법 검사가 끝나기 전 의미 오류를 보고하지 않습니다.
-     * 검사를 모두 통과한 뒤 메모리에 넣으며 파일을 다시 저장하지 않습니다.
-     * @param db 시작 데이터를 넣을 빈 DB
-     * @throws StartupDataException 구체적인 생성·접근·문법·의미 오류 하나; 기존 파일 미변경
+     * 없는 파일 생성과 접근 확인 후 두 파일의 문법을 모두 검사하고 의미·관계 검사를 수행,
+     * 검사 통과한 데이터만 적재하며 낱개 목록은 접미번호순으로 정렬
+     * @param db 검사가 완료된 상품과 낱개 행을 적재할 빈 공유 데이터베이스
+     * @throws StartupDataException 파일 생성,접근 또는 문법,의미 검사에서 오류를 확인하면 던짐
      */
     public void load(InventoryDatabase db) {
         access.ensureDataFiles();
@@ -68,15 +70,11 @@ public class StartupLoader {
     }
 
     /**
-     * UTF-8 REPORT 디코더로 읽고 파일 시작의 U+FEFF만 BOM으로 거절합니다.
-     * 중간의 U+FEFF는 원문에 유지하여 EntityParser에서 해당 필드의 문법 오류로 처리합니다.
-     * 기획서 원판 5.1절: LF·CR·CRLF 혼용 허용, CRLF는 개행 하나.
-     * BufferedReader.readLine으로 행을 구분할 수 있습니다.
-     * 0바이트=[]; 개행만=[""]; A+개행=[A]; A+개행 두 개=[A, ""].
-     * 원문 공백·대소문자 유지. 자원 close 실패까지 시작 오류로 전달.
-     * @param path 읽을 데이터 파일 절대 경로
-     * @return 원문 행 목록; 마지막 정상 개행 하나는 추가 빈 행이 아님
-     * @throws StartupDataException 읽기 실패, UTF-8 또는 BOM 오류
+     * 파일을 엄격한 UTF-8로 읽고 파일 시작의 BOM을 거절
+     * LF·CR·CRLF 혼용을 허용하며 원문 공백과 대소문자를 유지
+     * @param path 읽을 논리 파일 또는 물리 파일의 절대 경로.
+     * @return 개행 문자를 제외한 원문 행 목록, 0바이트 파일은 빈 목록이고 마지막 정상 개행 하나는 추가 빈 행으로 세지 않음
+     * @throws StartupDataException 파일 생성·접근 또는 문법·의미 검사에서 오류를 확인하면 던짐
      */
     private List<String> readStrictLines(Path path) {
         String name = path.getFileName().toString();

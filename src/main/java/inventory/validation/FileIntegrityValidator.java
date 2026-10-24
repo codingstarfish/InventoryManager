@@ -15,23 +15,18 @@ import inventory.database.RawLogicalRow;
 import inventory.exception.StartupDataException;
 
 /**
- * 시작 의미·관계 검사. 파일 접근·저장·상태 게시 없이 구체 오류 이유를 전달합니다.
+ * 시작 의미·관계 검사. 파일 접근·저장·상태 게시 없이 구체 오류 이유를 전달
  */
 public class FileIntegrityValidator {
-    /** 상태 없는 시작 의미·관계 검증기를 생성합니다. */
+
     public FileIntegrityValidator() {
     }
 
     /**
-     * 양쪽 문법 통과 후에만 실행. 개별 범위·가격 단위 → 논리 중복·P00001부터 연속
-     * → 등록 참조 → code/suffix 조합 중복 → 상품별 001부터 연속 → 접미번호순 FIFO
-     * → sum((long)size*Q)&lt;=1000000.
-     * 중복 검사 전에 Map.put으로 원본을 덮어쓰지 않습니다.
-     * 파일의 원래 행 순서는 자유. 미판매를 만난 뒤 판매 완료가 나오면 FIFO 오류.
-     * 수량은 검증된 물리 행에서 계산하므로 별도 수량 필드를 검사하지 않습니다.
-     * @param logicalRows 논리 파일 문법을 통과한 행 목록
-     * @param physicalRows 물리 파일 문법을 통과한 행 목록
-     * @throws StartupDataException 범위·가격 단위·중복·연속성·등록 참조·FIFO·창고 용량 오류
+     * 두 파일의 문법 검사가 끝난 행에 대해 범위, 중복, 연속성, 등록 참조, FIFO와 창고 용량을 검사
+     * @param logicalRows 논리 파일의 문법 검사를 통과한 전체 행 목록, 빈 목록도 허용하며 의미 오류 값은 포함될 수 있음
+     * @param physicalRows 물리 파일의 문법 검사를 통과한 전체 행 목록, 판매된 행도 포함하며 빈 목록도 허용
+     * @throws StartupDataException 파일 생성,접근 또는 문법,의미 검사에서 오류를 확인하면 전달
      */
     public void validate(List<RawLogicalRow> logicalRows, List<RawPhysicalRow> physicalRows) {
         Map<String, RawLogicalRow> logical = new TreeMap<>();
@@ -104,13 +99,23 @@ public class FileIntegrityValidator {
         }
     }
 
-    /** P와 숫자 다섯 자리 문법은 EntityParser에서 이미 검사했습니다. */
+    /**
+     * 문법 검사를 통과한 논리코드의 번호가 00000인지 검사
+     * @param code 문법상 대문자 P와 숫자 다섯 자리로 구성된 논리코드
+     * @param file 번호 범위 오류를 표시할 논리 파일 또는 물리 파일의 이름
+     */
     private void validateCode(String code, String file) {
         if (code.equals("P00000")) {
             throw dataError(file, "논리코드의 번호는 00001~99999여야 합니다.");
         }
     }
 
+    /**
+     * 오류 파일명과 구체적인 이유를 담은 시작 검사 예외를 생성
+     * @param file 오류가 발생한 데이터 파일의 이름
+     * @param reason 위반한 범위나 관계 규칙을 설명하는 오류 안내 문구
+     * @return 호출한 위치에서 던질 StartupDataException 객체
+     */
     private StartupDataException dataError(String file, String reason) {
         return new StartupDataException(List.of(file), reason);
     }

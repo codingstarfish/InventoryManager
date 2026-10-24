@@ -32,6 +32,9 @@ public final class Limits {
     // 최대 요청 수량
     public static final int MAX_QUANTITY = 100;
 
+    /**
+     * 상수만 사용하도록 외부의 인스턴스 생성을 막음
+     */
     private Limits() {
     }
 }

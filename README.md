@@ -90,22 +90,3 @@ java -jar InventoryManager.jar
 | 상품 등록, 입고·판매, 조회 | `ProductService`, `StockService`, `QueryService` |
 | 공유 상태 조회와 저장 후 상태 교체 | `InventoryDatabase` |
 | 정렬과 UTF-8 파일 기록 | `EntityWriter` |
-
-조회용 Repository 두 개와 `CommitCoordinator`의 역할은 `InventoryDatabase`로 합쳤습니다.
-별도 읽기 클래스 `EntityLoader`는 `StartupLoader`에 합쳤고, `ParsedFiles`와
-상품 하나를 감싸던 `RegisterResult`는 제거했습니다. 운영 소스 파일은 42개에서 36개로 줄었습니다.
-
-파일 검증은 두 파일의 문법 검사를 모두 끝낸 뒤 의미 검사를 수행합니다.
-서비스는 작업에 필요한 등록 한도·수량·재고·접미번호·창고 용량을 검사합니다.
-`InventorySnapshot`과 조회 결과는 데이터를 전달하고 컬렉션을 불변 복사하며,
-이미 검사한 전체 데이터의 규칙을 다시 검사하지 않습니다.
-현재 재고·발급 가능 수·남은 용량은 원래 수량으로부터 계산합니다.
-
-등록은 논리 파일만, 입고·판매는 물리 파일만 저장합니다.
-파일 저장과 닫기가 성공한 뒤 공유 상태를 교체하며, 저장 실패는 콘솔에서 안내하고 종료합니다.
-
-## 동작 검증
-
-PowerShell에서 `./scripts/build.ps1 -Check`를 실행하면 JDK만으로 빌드와 테스트를 수행합니다.
-입력 경계값, 시작 파일 오류, 상품 등록·입고·FIFO 판매, 코드·용량 한도, 저장 실패,
-EOF·취소, 실제 JAR의 종료 코드와 재실행 후 상태를 확인합니다.

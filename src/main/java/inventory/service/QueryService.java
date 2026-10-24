@@ -4,7 +4,7 @@ import inventory.database.InventoryDatabase;
 import inventory.dto.AllInventoryResult;
 import inventory.dto.ItemDetail;
 
-/** 파일을 다시 읽지 않고 현재 메모리 상태를 조회합니다. */
+// 재고 조회
 public class QueryService {
     private final InventoryDatabase db;
 

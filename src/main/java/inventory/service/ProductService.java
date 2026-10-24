@@ -5,7 +5,7 @@ import inventory.entity.LogicalItem;
 import inventory.literal.Limits;
 import inventory.validation.DomainRules;
 
-/** 신규 상품 등록. Console에서 한도와 입력을 확인한 뒤 논리 파일만 저장합니다. */
+//신규 상품 등록
 public class ProductService {
     private final InventoryDatabase db;
 

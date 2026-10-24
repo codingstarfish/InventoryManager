@@ -6,20 +6,14 @@ import inventory.literal.InputPatterns;
 import inventory.literal.Limits;
 import inventory.exception.UserInputException;
 
-/**
- * 사용자 입력 전용 순수 검증. 파일·콘솔·전역 상태 접근 없음. 모든 raw는 null 금지.
- */
+
 public class InputValidator {
-    /** 상태 없는 사용자 입력 검증기를 생성합니다. */
+
     public InputValidator() {
     }
 
-    /**
-     * 양 끝의 U+0020만 제거합니다. trim/strip/소문자 변환 금지.
-     * 내부 공백·탭·다른 공백 문자는 보존. 파일 입력에 사용하지 않습니다.
-     * @param raw null이 아닌 사용자 입력 원문
-     * @return 정규화된 문자열; 표준 공백만 있으면 빈 문자열
-     */
+   
+    // 양 끝의 U+0020를 제거함. tap은 제거하지 않음.
     public String normalizeSpaces(String raw) {
         int start = 0;
         int end = raw.length();
@@ -32,56 +26,31 @@ public class InputValidator {
         return raw.substring(start, end);
     }
 
-    /**
-     * 정규화 후 [1-5] 하나를 검사합니다.
-     * @param raw 사용자 입력 원문
-     * @return 메뉴 번호 1~5
-     * @throws UserInputException MENU_SYNTAX
-     */
+    // [1-5]중 하나여야됨
     public int parseMainMenu(String raw) {
         String value = requirePattern(raw, InputPatterns.MAIN_MENU, ErrorCode.MENU_SYNTAX);
         return value.charAt(0) - '0';
     }
 
-    /**
-     * 정규화 후 [12] 하나를 검사합니다.
-     * @param raw 사용자 입력 원문
-     * @return 1=전체, 2=단일
-     * @throws UserInputException QUERY_MODE_SYNTAX
-     */
+    
+    // 1, 2중 하나여야됨
     public int parseQueryMode(String raw) {
         String value = requirePattern(raw, InputPatterns.QUERY_MODE, ErrorCode.QUERY_MODE_SYNTAX);
         return value.charAt(0) - '0';
     }
 
-    /**
-     * 정규화 후 소문자 y/n 하나를 검사합니다. 대문자 거절.
-     * @param raw 사용자 입력 원문
-     * @return y이면 true, n이면 false
-     * @throws UserInputException RETRY_SYNTAX
-     */
+    // y, n중 하나여야됨
     public boolean parseRetry(String raw) {
         String value = requirePattern(raw, InputPatterns.RETRY, ErrorCode.RETRY_SYNTAX);
         return value.equals("y");
     }
 
-    /**
-     * 정규화 후 완성형 한글·영문·숫자·U+0020만 1~30자.
-     * 허용 문자와 길이를 정규식으로 검사하며 내부 연속 공백은 유지합니다.
-     * @param raw 사용자 입력 원문
-     * @return 검증된 정규화 이름
-     * @throws UserInputException NAME_SYNTAX
-     */
+    // 정규화 후 완성형 한글·영문·숫자·U+0020만 1~30자
     public String parseName(String raw) {
         return requirePattern(raw, InputPatterns.NAME, ErrorCode.NAME_SYNTAX);
     }
 
-    /**
-     * 정규화 → P[0-9]{5} → 번호 1~99999 순으로 검사. 등록 여부는 Service 담당.
-     * @param raw 사용자 입력 원문
-     * @return 검증된 대문자 논리코드
-     * @throws UserInputException CODE_SYNTAX 다음 CODE_RANGE
-     */
+    // 정규화 → P[0-9]{5} → 번호 1~99999 순으로 검사
     public String parseLogicalCode(String raw) {
         String value = requirePattern(raw, InputPatterns.LOGICAL_CODE, ErrorCode.CODE_SYNTAX);
         int number = Integer.parseInt(value.substring(1));
@@ -91,15 +60,7 @@ public class InputValidator {
         return value;
     }
 
-    /**
-     * 정규화 후 ASCII 숫자 1~10자리. 선행 0 허용. Long.parseLong 사용.
-     * int로 먼저 변환하지 않습니다. 값의 의미 범위 검사는 호출자가 수행.
-     * @param raw 사용자 입력 원문
-     * @param field SIZE, PRICE, INBOUND_QUANTITY, SALE_QUANTITY 중 하나
-     * @return 0~9999999999의 정확한 long 값
-     * @throws UserInputException SIZE_SYNTAX / PRICE_SYNTAX / INBOUND_SYNTAX / SALE_SYNTAX
-     * @throws IllegalArgumentException 허용하지 않은 field를 개발자가 전달
-     */
+    // 정규화 후 ASCII 숫자 1~10자리. 선행 0 허용
     public long parseUnsignedDecimal(String raw, Field field) {
         ErrorCode syntaxCode = switch (field) {
             case SIZE -> ErrorCode.SIZE_SYNTAX;
@@ -113,12 +74,7 @@ public class InputValidator {
         return Long.parseLong(value);
     }
 
-    /**
-     * 숫자 문법 → 1~1000 범위 검사 → int 변환.
-     * @param raw 사용자 입력 원문
-     * @return 검증된 크기
-     * @throws UserInputException SIZE_SYNTAX 다음 SIZE_RANGE
-     */
+    // 숫자 문법 검사 -> 1~1000 범위 검사
     public int parseSize(String raw) {
         long value = parseUnsignedDecimal(raw, Field.SIZE);
         if (value < Limits.MIN_SIZE || value > Limits.MAX_SIZE) {
@@ -127,12 +83,7 @@ public class InputValidator {
         return (int) value;
     }
 
-    /**
-     * 숫자 문법 → 10~10000000 범위 → 10의 배수 순으로 검사.
-     * @param raw 사용자 입력 원문
-     * @return 검증된 원 단위 가격
-     * @throws UserInputException PRICE_SYNTAX, PRICE_RANGE, PRICE_UNIT 순
-     */
+    // 숫자 문법 검사 → 10~10000000 범위 검사 → 10의 배수 검사
     public int parsePrice(String raw) {
         long value = parseUnsignedDecimal(raw, Field.PRICE);
         if (value < Limits.MIN_PRICE || value > Limits.MAX_PRICE) {
@@ -144,14 +95,7 @@ public class InputValidator {
         return (int) value;
     }
 
-    /**
-     * 숫자 문법 → 1~100 범위 → int 변환.
-     * @param raw 사용자 입력 원문
-     * @param field INBOUND_QUANTITY 또는 SALE_QUANTITY
-     * @return 검증된 요청 수량
-     * @throws UserInputException 해당 INBOUND/SALE_SYNTAX 다음 RANGE
-     * @throws IllegalArgumentException 허용하지 않은 field
-     */
+    // 숫자 문법 검사 → 1~100 범위 검사
     public int parseQuantity(String raw, Field field) {
         ErrorCode rangeCode = switch (field) {
             case INBOUND_QUANTITY -> ErrorCode.INBOUND_RANGE;
@@ -165,7 +109,7 @@ public class InputValidator {
         return (int) value;
     }
 
-    /** 표준 공백 정규화 후 전체 문자열의 문법을 검사합니다. */
+    // 공백을 제거한 후 문자열 검사
     private String requirePattern(String raw, String pattern, ErrorCode code) {
         String value = normalizeSpaces(raw);
         if (!value.matches(pattern)) {

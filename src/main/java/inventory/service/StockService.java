@@ -10,7 +10,7 @@ import inventory.literal.Limits;
 import java.util.List;
 import java.util.Map;
 
-/** 입고와 FIFO 판매. 조건을 모두 통과한 뒤 물리 파일만 저장합니다. */
+// 재고 입고, 상품 판매
 public class StockService {
     private final InventoryDatabase db;
 
@@ -18,7 +18,7 @@ public class StockService {
         this.db = db;
     }
 
-    /** 누적 입고가 999개이면 수량을 입력받기 전에 거절합니다. */
+    // 누적 입고 999개 검사
     public StockSummary selectInbound(String code) {
         StockSummary summary = db.summarize(code);
         if (summary.received() == Limits.MAX_SUFFIX) {
@@ -31,7 +31,7 @@ public class StockService {
         return db.summarize(code);
     }
 
-    /** 선택과 수량 범위 검사를 마친 요청의 접미번호 여유와 용량을 검사한 뒤 입고합니다. */
+    //선택과 수량 범위 검사를 마친 후 코드에 진입한다.
     public StockChangeResult receive(StockSummary summary, int quantity) {
         if (quantity > summary.issuable()) {
             throw new BusinessRuleException(ErrorCode.SUFFIX_SHORTAGE, Map.of("issuable", (long) summary.issuable()));
@@ -51,7 +51,7 @@ public class StockService {
         return new StockChangeResult(quantity, summary.current() + quantity);
     }
 
-    /** 선택과 수량 범위 검사를 마친 요청의 재고를 확인하고 작은 접미번호부터 판매합니다. */
+    //선택과 수량 범위 검사를 마친 후 코드에 진입한다.
     public StockChangeResult sell(StockSummary summary, int quantity) {
         if (quantity > summary.current()) {
             throw new BusinessRuleException(ErrorCode.STOCK_SHORTAGE, Map.of("current", (long) summary.current()));

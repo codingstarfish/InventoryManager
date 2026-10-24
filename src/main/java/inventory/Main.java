@@ -33,8 +33,13 @@ public class Main {
             InventoryDatabase db = new InventoryDatabase(writer);
             new StartupLoader(access).load(db);
             view.startupPassed();
-            exitCode = new Console(input, new InputValidator(), new ProductService(db),
-                    new StockService(db), new QueryService(db), view).run();
+            exitCode = new Console(input,
+                new InputValidator(),
+                new ProductService(db),
+                new StockService(db), 
+                new QueryService(db), 
+                view
+            ).run();
         } catch (StartupDataException e) {
             view.startupFailed(e);
             exitCode = 1;

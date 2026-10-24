@@ -66,5 +66,5 @@ public enum ErrorCode {
     QUERY_MODE_SYNTAX,
 
     //y 또는 n을 입력해야 합니다. 같은 확인 반복. 
-    RETRY_SYNTAX;
+    RETRY_SYNTAX
 }

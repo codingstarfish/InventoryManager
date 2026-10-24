@@ -2,7 +2,7 @@ package inventory.dto;
 
 import java.util.List;
 
-/** 논리코드순 전체 상품과 창고 용량. 재고가 없는 상품도 포함합니다. */
+//논리코드순 아이템 요약과 현재 재고들의 사이즈 합
 public record AllInventoryResult(List<StockSummary> items, WarehouseSummary warehouse) {
     public AllInventoryResult {
         items = List.copyOf(items);

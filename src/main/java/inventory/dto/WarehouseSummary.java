@@ -2,8 +2,9 @@ package inventory.dto;
 
 import inventory.literal.Limits;
 
-/** 미판매 낱개의 크기 합과 남은 창고 용량. */
+//used: 현재 차지하고 있는 양. 
 public record WarehouseSummary(long used) {
+    //남은 용량을 반환
     public long remaining() {
         return Limits.MAX_CAPACITY - used;
     }

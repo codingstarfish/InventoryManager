@@ -40,6 +40,7 @@ public class InventoryDatabase {
         return item;
     }
 
+    //logical code로 sort한 결과 반환
     public List<LogicalItem> findAllOrdered() {
         return logicalItems.values().stream()
                 .sorted(Comparator.comparing(LogicalItem::code)).toList();

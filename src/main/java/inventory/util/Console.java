@@ -17,7 +17,6 @@ import inventory.service.ProductService;
 import inventory.service.StockService;
 import inventory.service.QueryService;
 import java.io.IOException;
-import java.util.Objects;
 
 /**
  * 메뉴와 재입력 흐름만 소유. 임시 입력은 각 메뉴의 지역 변수. 파일 쓰기·가변 재고 소유 없음.
@@ -32,12 +31,12 @@ public class Console {
 
     
     public Console(Input input, InputValidator validator, ProductService productService, StockService stockService, QueryService queryService, ConsoleView view) {
-        this.input = Objects.requireNonNull(input, "input");
-        this.validator = Objects.requireNonNull(validator, "validator");
-        this.productService = Objects.requireNonNull(productService, "productService");
-        this.stockService = Objects.requireNonNull(stockService, "stockService");
-        this.queryService = Objects.requireNonNull(queryService, "queryService");
-        this.view = Objects.requireNonNull(view, "view");
+        this.input = input;
+        this.validator = validator;
+        this.productService = productService;
+        this.stockService = stockService;
+        this.queryService = queryService;
+        this.view = view;
     }
 
     /**

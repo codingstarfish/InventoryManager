@@ -3,7 +3,6 @@ package inventory.util;
 import java.io.BufferedReader;
 import java.io.IOException;
 import inventory.exception.EndOfInputException;
-import java.util.Objects;
 
 /**
  * 한 줄 사용자 입력만 담당. 파일 reader로 재사용하지 않습니다.
@@ -17,7 +16,7 @@ public class Input {
      * @param reader Main에서 UTF-8 System.in을 감싼 입력 채널 하나
      */
     public Input(BufferedReader reader) {
-        this.reader = Objects.requireNonNull(reader, "reader");
+        this.reader = reader;
     }
 
     /**

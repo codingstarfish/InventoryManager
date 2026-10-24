@@ -13,7 +13,6 @@ import java.util.List;
 import inventory.entity.LogicalItem;
 import inventory.entity.PhysicalItem;
 import inventory.exception.SaveFailureException;
-import java.util.Objects;
 
 /**
  * 파일 기록의 단일 소유자. 생성자는 파일 미변경. 실패 시 파일 보존·복구 보장 없음.
@@ -30,8 +29,8 @@ public class EntityWriter {
      * @param physicalPath 시작 시 확정한 물리 파일 경로
      */
     public EntityWriter(Path logicalPath, Path physicalPath) {
-        this.logicalPath = Objects.requireNonNull(logicalPath, "logicalPath");
-        this.physicalPath = Objects.requireNonNull(physicalPath, "physicalPath");
+        this.logicalPath = logicalPath;
+        this.physicalPath = physicalPath;
     }
 
     /**

@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import inventory.exception.StartupDataException;
-import java.util.Objects;
 
 /**
  * 시작 파일 생성·접근 확인·경로 제공. 현재 작업 디렉터리 아래 data 기준.
@@ -20,7 +19,7 @@ public class FileAccess {
      * @param workingDir 실제 작업 디렉터리; 테스트에서는 별도 작업 경로
      */
     public FileAccess(Path workingDir) {
-        this.workingDir = Objects.requireNonNull(workingDir, "workingDir");
+        this.workingDir = workingDir;
     }
 
     /**

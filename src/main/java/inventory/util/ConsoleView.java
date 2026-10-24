@@ -13,7 +13,6 @@ import inventory.exception.StartupDataException;
 import inventory.exception.SaveFailureException;
 import java.io.PrintWriter;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * 출력 전용. 업무 판단·입력·파일 수정·System.exit 없음. 프롬프트는 출력 직후 flush.
@@ -27,7 +26,7 @@ public class ConsoleView {
      * @param out Main에서 주입한 UTF-8 표준 출력
      */
     public ConsoleView(PrintWriter out) {
-        this.out = Objects.requireNonNull(out, "out");
+        this.out = out;
     }
 
     /**
@@ -60,7 +59,6 @@ public class ConsoleView {
      * @param field 위 부 프롬프트 중 하나
      */
     public void prompt(Field field) {
-        Objects.requireNonNull(field, "field");
         String text = switch (field) {
             case NAME -> "신규 상품명";
             case SIZE -> "상품 크기(용량 단위)";
@@ -82,7 +80,6 @@ public class ConsoleView {
      * @param purpose 입고·판매·조회 목적
      */
     public void promptCode(CodePurpose purpose) {
-        Objects.requireNonNull(purpose, "purpose");
         String text = switch (purpose) {
             case INBOUND -> "입고할 논리적 상품코드";
             case SALE -> "판매할 기존 상품의 논리코드";
@@ -135,7 +132,6 @@ public class ConsoleView {
      * @throws IllegalArgumentException QUERY 전달; 조회는 상품이 없어도 방식 선택
      */
     public void noProducts(CodePurpose purpose) {
-        Objects.requireNonNull(purpose, "purpose");
         switch (purpose) {
             case INBOUND -> line("등록된 상품이 없어 입고할 수 없습니다. 먼저 상품을 등록해야 합니다.");
             case SALE -> line("등록된 상품이 없어 판매할 수 없습니다.");

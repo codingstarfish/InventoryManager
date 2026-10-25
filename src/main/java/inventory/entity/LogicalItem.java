@@ -1,12 +1,8 @@
 package inventory.entity;
 
-/**
- * 입력 또는 시작 검사를 통과한 상품 정보를 보관
- * @param code P00001~P99999 논리코드
- * @param name 1~30자의 상품명입니다
- * @param size 1~1000 용량 단위의 낱개 크기
- * @param price 10~10000000원 사이의 10원 단위 가격
- */
+// 등록된 상품 정보. 값은 입력/시작 검사에서 확인
+// code: P00001~P99999, name: 1~30자
+// size: 1~1000, price: 10~10000000원이며 10의 배수
 public record LogicalItem(
         String code,
         String name,

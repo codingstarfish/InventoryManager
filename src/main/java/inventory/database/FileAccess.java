@@ -7,24 +7,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import inventory.exception.StartupDataException;
 
-/**
- * 시작 파일 생성,접근 확인,경로 제공함,  현재 작업 디렉터리는 /data 기준.
- */
+// 작업 디렉터리 아래 data 폴더의 파일 생성, 접근 확인, 경로 계산
 public class FileAccess {
     /** 실제 작업 디렉터리 */
     private final Path workingDir;
 
-    /**
-     * @param workingDir 프로그램을 실행한 작업 디렉터리
-     */
     public FileAccess(Path workingDir) {
         this.workingDir = workingDir;
     }
 
-    /**
-     *존재하지 않는 두 데이터 파일만 생성, 기존 파일은 유지
-     * @throws StartupDataException 파일 생성·접근 또는 문법·의미 검사에서 오류를 확인하면 던짐
-     */
+    // data 폴더와 없는 데이터 파일만 생성. 기존 파일은 그대로 둠
+    // 생성이나 접근에 실패하면 StartupDataException
     public void ensureDataFiles() {
         Path data = workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR);
         try {
@@ -45,10 +38,8 @@ public class FileAccess {
         }
     }
 
-    /**
-     * 두 데이터 경로가 일반 파일이며 읽기와 쓰기가 가능한지 확인
-     * @throws StartupDataException 파일 생성·접근 또는 문법·의미 검사에서 오류를 확인하면 던짐
-     */
+    // 두 파일이 일반 파일인지, 읽기/쓰기가 가능한지 확인
+    // 접근할 수 없으면 StartupDataException
     public void checkReadableWritable() {
         for (Path path : List.of(logicalPath(), physicalPath())) {
             String fileName = path.getFileName().toString();
@@ -70,18 +61,12 @@ public class FileAccess {
         }
     }
 
-    /**
-     * 작업 디렉터리를 기준으로 논리 파일의 위치를 계산
-     * @return 작업 디렉터리/data/logical_item.txt에 해당하는 절대 경로
-     */
+    // 작업 디렉터리/data/logical_item.txt의 절대 경로
     public Path logicalPath() {
         return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.LOGICAL_FILE);
     }
 
-    /**
-     * 작업 디렉터리를 기준으로 물리 파일의 위치를 계산합니다.
-     * @return 작업 디렉터리/data/physical_item.txt에 해당하는 절대 경로
-     */
+    // 작업 디렉터리/data/physical_item.txt의 절대 경로
     public Path physicalPath() {
         return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.PHYSICAL_FILE);
     }

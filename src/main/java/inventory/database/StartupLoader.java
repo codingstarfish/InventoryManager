@@ -16,9 +16,7 @@ import inventory.entity.PhysicalItem;
 import inventory.exception.StartupDataException;
 import inventory.validation.FileIntegrityValidator;
 
-/**
- * 시작 단계
- */
+// 시작할 때 파일을 검사하고, 통과한 데이터만 DB에 넣음
 public class StartupLoader {
     /** 시작 생성,접근 및 경로 */
     private final FileAccess access;
@@ -27,22 +25,14 @@ public class StartupLoader {
     /** 의미·관계 검사 */
     private final FileIntegrityValidator validator;
 
-    /**
-     * 파일 접근 도구를 보관하고 문법,의미 검증기를 생성
-     * @param access 작업 디렉터리 아래의 데이터 경로와 생성,접근 검사를 제공하는 도구
-     */
     public StartupLoader(FileAccess access) {
         this.access = access;
         this.parser = new EntityParser();
         this.validator = new FileIntegrityValidator();
     }
 
-    /**
-     * 없는 파일 생성과 접근 확인 후 두 파일의 문법을 모두 검사하고 의미·관계 검사를 수행,
-     * 검사 통과한 데이터만 적재하며 낱개 목록은 접미번호순으로 정렬
-     * @param db 검사가 완료된 상품과 낱개 행을 적재할 빈 공유 데이터베이스
-     * @throws StartupDataException 파일 생성,접근 또는 문법,의미 검사에서 오류를 확인하면 던짐
-     */
+    // 파일 생성/접근 확인 → 두 파일 문법 검사 → 의미 검사 → DB에 적재
+    // 검사 실패 시 StartupDataException. 적재 후 낱개는 접미번호순으로 정렬
     public void load(InventoryDatabase db) {
         access.ensureDataFiles();
         access.checkReadableWritable();
@@ -69,13 +59,9 @@ public class StartupLoader {
         }
     }
 
-    /**
-     * 파일을 엄격한 UTF-8로 읽고 파일 시작의 BOM을 거절
-     * LF·CR·CRLF 혼용을 허용하며 원문 공백과 대소문자를 유지
-     * @param path 읽을 논리 파일 또는 물리 파일의 절대 경로.
-     * @return 개행 문자를 제외한 원문 행 목록, 0바이트 파일은 빈 목록이고 마지막 정상 개행 하나는 추가 빈 행으로 세지 않음
-     * @throws StartupDataException 파일 생성·접근 또는 문법·의미 검사에서 오류를 확인하면 던짐
-     */
+    // UTF-8 오류와 파일 시작의 BOM을 거절. 공백과 대소문자는 그대로 읽음
+    // LF/CR/CRLF 혼용 허용. 마지막 개행 하나는 빈 행으로 세지 않음
+    // 읽기 실패나 인코딩/BOM 오류는 StartupDataException
     private List<String> readStrictLines(Path path) {
         String name = path.getFileName().toString();
         List<String> lines = new ArrayList<>();

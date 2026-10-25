@@ -1,53 +1,36 @@
 package inventory.service;
 
-import java.util.Map;
-import inventory.literal.ErrorCode;
-import inventory.entity.LogicalItem;
-import inventory.repository.LogicalItemRepository;
-import inventory.repository.PhysicalItemRepository;
+import inventory.database.InventoryDatabase;
 import inventory.dto.AllInventoryResult;
 import inventory.dto.ItemDetail;
-import inventory.exception.BusinessRuleException;
-import java.util.Objects;
 
-/**
- * 메모리 상태 조회만 수행. 사용자 입력·출력·파일 쓰기 없음.
- */
+// 재고 조회
 public class QueryService {
-    /** 공유 db의 논리 저장소 */
-    private final LogicalItemRepository logicalRepo;
-    /** 동일 db의 낱개 저장소 */
-    private final PhysicalItemRepository physicalRepo;
+    private final InventoryDatabase db;
 
     /**
-     * 의존 부품을 보관합니다. 생성 시 파일 접근·입력·저장 없음.
-     * @param logicalRepo 공유 db의 논리 저장소
-     * @param physicalRepo 동일 db의 낱개 저장소
+     * 재고 조회에 사용할 공유 데이터베이스를 보관
+     * @param db 시작 검사와 완료된 작업의 결과가 반영된 공유 데이터베이스
      */
-    public QueryService(LogicalItemRepository logicalRepo, PhysicalItemRepository physicalRepo) {
-        this.logicalRepo = Objects.requireNonNull(logicalRepo, "logicalRepo");
-        this.physicalRepo = Objects.requireNonNull(physicalRepo, "physicalRepo");
+    public QueryService(InventoryDatabase db) {
+        this.db = db;
     }
 
     /**
-     * 전체 상품을 수량 정보와 창고 합계로 조회합니다.
-     * 재고 0·중복 이름 상품도 각각 유지. 파일 재읽기·저장 없음.
-     * @return 논리코드순 전체 상품 및 창고 합계; 상품 없음도 정상
+     * 모든 상품의 재고 요약과 창고 사용 현황을 조회, 파일을 다시 읽거나 저장하지 않음
+     * @return 논리코드 오름차순의 상품 요약 목록과 창고 사용,남은 용량을 담은 조회 결과
      */
     public AllInventoryResult findAll() {
-        return new AllInventoryResult(logicalRepo.findAllOrdered().stream().map(physicalRepo::summarize).toList(),
-                physicalRepo.warehouse());
+        return new AllInventoryResult(db.findAllOrdered().stream()
+                .map(item -> db.summarize(item.code())).toList(), db.warehouse());
     }
 
     /**
-     * 선택 상품과 판매 기록을 포함한 전체 낱개 조회. 창고 합계 추가 없음.
-     * @param code 검증된 논리코드
-     * @return 상품 수량·접미번호순 불변 낱개 목록
-     * @throws BusinessRuleException CODE_NOT_FOUND
+     * 선택한 상품의 재고 요약과 판매된 낱개를 포함한 전체 낱개 목록을 조회
+     * @param code 조회할 등록 상품의 P00001~P99999 형식 논리코드
+     * @return 상품 요약과 접미번호 오름차순의 낱개 목록을 담은 조회 결과
      */
     public ItemDetail findOne(String code) {
-        LogicalItem item = logicalRepo.findByCode(code)
-                .orElseThrow(() -> new BusinessRuleException(ErrorCode.CODE_NOT_FOUND, Map.of()));
-        return new ItemDetail(physicalRepo.summarize(item), physicalRepo.findByLogicalCodeOrdered(code));
+        return new ItemDetail(db.summarize(code), db.findPhysicalItems(code));
     }
 }

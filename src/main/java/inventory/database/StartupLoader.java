@@ -1,60 +1,99 @@
 package inventory.database;
 
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.util.ArrayList;
+import java.nio.file.Path;
 import java.util.List;
-import inventory.validation.FileIntegrityValidator;
-import inventory.dto.InventorySnapshot;
+import java.util.Comparator;
+import inventory.entity.LogicalItem;
+import inventory.entity.PhysicalItem;
 import inventory.exception.StartupDataException;
-import java.util.Objects;
+import inventory.validation.FileIntegrityValidator;
 
 /**
- * 시작 단계 조율. 생성자는 파일을 읽지 않습니다.
+ * 시작 단계
  */
 public class StartupLoader {
-    /** 시작 생성·접근 및 경로 */
+    /** 시작 생성,접근 및 경로 */
     private final FileAccess access;
-    /** 엄격한 원문 읽기 */
-    private final EntityLoader loader;
     /** 문법 단계 변환 */
     private final EntityParser parser;
     /** 의미·관계 검사 */
     private final FileIntegrityValidator validator;
 
     /**
-     * 의존 부품을 보관합니다. 생성 시 파일 접근·입력·저장 없음.
-     * @param access 시작 생성·접근 및 경로
-     * @param loader 엄격한 원문 읽기
-     * @param parser 문법 단계 변환
-     * @param validator 의미·관계 검사
+     * 파일 접근 도구를 보관하고 문법,의미 검증기를 생성
+     * @param access 작업 디렉터리 아래의 데이터 경로와 생성,접근 검사를 제공하는 도구
      */
-    public StartupLoader(FileAccess access, EntityLoader loader, EntityParser parser, FileIntegrityValidator validator) {
-        this.access = Objects.requireNonNull(access, "access");
-        this.loader = Objects.requireNonNull(loader, "loader");
-        this.parser = Objects.requireNonNull(parser, "parser");
-        this.validator = Objects.requireNonNull(validator, "validator");
+    public StartupLoader(FileAccess access) {
+        this.access = access;
+        this.parser = new EntityParser();
+        this.validator = new FileIntegrityValidator();
     }
 
     /**
-     * ensureDataFiles → checkReadableWritable → 양쪽 readStrictLines 및 전체 문법 검사
-     * → ParsedFiles → validateAndBuild → 정상 상태 반환.
-     * 양쪽 파일 문법 검사가 끝나기 전 의미 오류를 보고하지 않습니다.
-     * 전체 성공 뒤에만 Main에서 InventoryDatabase 생성.
-     * @return 시작 무결성 검사를 통과한 불변 전체 상태
-     * @throws StartupDataException 구체적인 생성·접근·문법·의미 오류 하나; 기존 파일 미변경
+     * 없는 파일 생성과 접근 확인 후 두 파일의 문법을 모두 검사하고 의미·관계 검사를 수행,
+     * 검사 통과한 데이터만 적재하며 낱개 목록은 접미번호순으로 정렬
+     * @param db 검사가 완료된 상품과 낱개 행을 적재할 빈 공유 데이터베이스
+     * @throws StartupDataException 파일 생성,접근 또는 문법,의미 검사에서 오류를 확인하면 던짐
      */
-    public InventorySnapshot load() {
+    public void load(InventoryDatabase db) {
         access.ensureDataFiles();
         access.checkReadableWritable();
-        List<String> logicalLines = loader.readStrictLines(access.logicalPath());
-        List<String> physicalLines = loader.readStrictLines(access.physicalPath());
+        List<String> logicalLines = readStrictLines(access.logicalPath());
+        List<String> physicalLines = readStrictLines(access.physicalPath());
         List<RawLogicalRow> logicalRows = new ArrayList<>();
         List<RawPhysicalRow> physicalRows = new ArrayList<>();
-        for (int i = 0; i < logicalLines.size(); i++) {
-            logicalRows.add(parser.parseLogicalSyntax(logicalLines.get(i), i + 1));
+        for (String line : logicalLines) {
+            logicalRows.add(parser.parseLogicalSyntax(line));
         }
-        for (int i = 0; i < physicalLines.size(); i++) {
-            physicalRows.add(parser.parsePhysicalSyntax(physicalLines.get(i), i + 1));
+        for (String line : physicalLines) {
+            physicalRows.add(parser.parsePhysicalSyntax(line));
         }
-        return validator.validateAndBuild(new ParsedFiles(logicalRows, physicalRows));
+        validator.validate(logicalRows, physicalRows);
+        for (RawLogicalRow row : logicalRows) {
+            db.addItem(new LogicalItem(row.code(), row.name(), row.size(), row.price()));
+        }
+        for (RawPhysicalRow row : physicalRows) {
+            db.findPhysicalItems(row.logicalCode())
+                    .add(new PhysicalItem(row.logicalCode(), row.suffix(), row.sold()));
+        }
+        for (RawLogicalRow row : logicalRows) {
+            db.findPhysicalItems(row.code()).sort(Comparator.comparingInt(PhysicalItem::suffix));
+        }
+    }
+
+    /**
+     * 파일을 엄격한 UTF-8로 읽고 파일 시작의 BOM을 거절
+     * LF·CR·CRLF 혼용을 허용하며 원문 공백과 대소문자를 유지
+     * @param path 읽을 논리 파일 또는 물리 파일의 절대 경로.
+     * @return 개행 문자를 제외한 원문 행 목록, 0바이트 파일은 빈 목록이고 마지막 정상 개행 하나는 추가 빈 행으로 세지 않음
+     * @throws StartupDataException 파일 읽기,접근에 실패하거나 UTF-8 또는 BOM 규칙을 위반하면 던짐
+     */
+    private List<String> readStrictLines(Path path) {
+        String name = path.getFileName().toString();
+        List<String> lines = new ArrayList<>();
+        var decoder = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT);
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(path), decoder))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (lines.isEmpty() && line.startsWith("\uFEFF")) {
+                    throw new StartupDataException(List.of(name), "BOM 없는 UTF-8 파일이어야 합니다.");
+                }
+                lines.add(line);
+            }
+        } catch (CharacterCodingException e) {
+            throw new StartupDataException(List.of(name), "올바른 UTF-8 파일이어야 합니다.", e);
+        } catch (IOException | SecurityException e) {
+            throw new StartupDataException(List.of(name), "데이터 파일을 읽을 수 없습니다.", e);
+        }
+        return lines;
     }
 }

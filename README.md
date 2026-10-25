@@ -76,3 +76,17 @@ java -jar InventoryManager.jar
 | `{작업 디렉터리}/data/logical_item.txt` | 상품명, 논리코드, 크기, 가격 |
 | `{작업 디렉터리}/data/physical_item.txt` | 논리코드, 접미번호, 판매여부 |
 
+## 코드 구조
+
+실행 흐름은 `Main → 시작 검사 → Console → Service → InventoryDatabase → EntityWriter`입니다.
+
+| 담당 | 클래스 |
+| --- | --- |
+| 파일 생성과 접근 확인 | `FileAccess` |
+| 파일 읽기와 시작 순서 | `StartupLoader` |
+| 파일의 필드 형식 검사 | `EntityParser` |
+| 파일의 값 범위·중복·연속성·참조·FIFO·용량 검사 | `FileIntegrityValidator` |
+| 사용자 입력과 화면 출력 | `Input`, `InputValidator`, `Console`, `ConsoleView` |
+| 상품 등록, 입고·판매, 조회 | `ProductService`, `StockService`, `QueryService` |
+| 공유 상태 조회와 저장 후 상태 교체 | `InventoryDatabase` |
+| 정렬과 UTF-8 파일 기록 | `EntityWriter` |

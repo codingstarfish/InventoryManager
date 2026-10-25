@@ -1,37 +1,13 @@
 package inventory.database;
 
-import inventory.literal.InputPatterns;
-import java.util.Objects;
 /**
- * lineNumber: 원본의 1부터 시작하는 행 번호.
- * logicalCode: 문법 통과한 논리코드.
- * suffix: 세 자리 숫자를 해석한 0~999.
- * sold: 파일 0=false, 1=true.
- * Entity가 아닌 문법 단계 중간 행. P00000, suffix=0도 의미 검사 전 허용.
- * 생성자는 null·행 번호·문법 범위만 확인하며 등록 존재·suffix 의미 범위를 검사하지 않습니다.
+ * 파일 문법 검사를 통과하고 의미 검사 전인 물리 행을 보관합니다. 등록 참조와 FIFO는 아직 검증하지 안한상태
+ * @param logicalCode 대문자 P와 숫자 다섯 자리로 구성된 코드로, 미등록 코드나 P00000도 포함될 수 있음
+ * @param suffix 파일의 세 자리 숫자를 해석한 0~999 사이의 값으로, 0은 의미 검사에서 거절
+ * @param sold 파일의 판매여부가 0이면 false이며 1이면 true인 상태
  */
 public record RawPhysicalRow(
-        int lineNumber,
         String logicalCode,
         int suffix,
         boolean sold
-) {
-    /**
-     * 생성 시 null·원본 행 번호·문법 범위만 검사합니다. 의미 검사는 하지 않습니다.
-     * Entity가 아닌 문법 단계 중간 행. P00000, suffix=0도 의미 검사 전 허용.
-     * 생성자는 null·행 번호·문법 범위만 확인하며 등록 존재·suffix 의미 범위를 검사하지 않습니다.
-     * @param lineNumber 원본의 1부터 시작하는 행 번호
-     * @param logicalCode 문법 통과한 논리코드
-     * @param suffix 세 자리 숫자를 해석한 0~999
-     * @param sold 파일 0=false, 1=true
-     * @throws IllegalArgumentException 행 번호 또는 문법 범위 조건 위반
-     * @throws NullPointerException 문자열 필드가 null
-     */
-    public RawPhysicalRow {
-        Objects.requireNonNull(logicalCode, "logicalCode");
-        if (lineNumber < 1 || !logicalCode.matches(InputPatterns.LOGICAL_CODE)
-                || suffix < 0 || suffix > 999) {
-            throw new IllegalArgumentException("원본 행의 문법 계약 위반");
-        }
-    }
-}
+) {}

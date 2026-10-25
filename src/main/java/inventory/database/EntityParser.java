@@ -5,20 +5,15 @@ import inventory.literal.DataPaths;
 import java.util.List;
 import inventory.exception.StartupDataException;
 
-/**
- * 문법 단계 전용 순수 변환기. Entity 대신 중간 행 객체를 생성해 문법 검사와 의미 검사를 분리
- */
+// 파일 한 줄의 형식만 검사. 값과 파일 간 관계는 FileIntegrityValidator에서 확인
 public class EntityParser {
 
     public EntityParser() {
     }
 
-    /**
-     * 빈 행과 필드 수를 확인하고 상품명, 논리코드, 크기, 가격 순서로 문법을 검사하되 값의 범위나 관계는 검사 안함
-     * @param line 개행을 제외한 논리 파일의 원문 한 행, 필드 순서는 상품명,논리코드,크기,가격
-     * @return 상품명,논리코드,크기,가격을 담은 중간 행 객체로, P00000, 크기 1001, 가격 1 등 의미 검사가 필요한 값도 유지
-     * @throws StartupDataException 빈 행, 필드 수 또는 필드 문법에 오류가 있으면 던짐
-     */
+    // 상품명, 논리코드, 크기, 가격 순서로 문법 검사
+    // P00000, 크기 1001, 가격 1 같은 값은 의미 검사에서 걸러짐
+    // 문법이 틀리면 StartupDataException
     public RawLogicalRow parseLogicalSyntax(String line) {
         String file = DataPaths.LOGICAL_FILE;
         if (line.isEmpty()) {
@@ -41,12 +36,8 @@ public class EntityParser {
         return new RawLogicalRow(fields[0], fields[1], Integer.parseInt(fields[2]), Integer.parseInt(fields[3]));
     }
 
-    /**
-     * 빈 행과 필드 수를 확인하고 논리코드, 세 자리 접미번호, 판매여부의 문법을 검사, 등록 참조와 FIFO는 검사하지 안함
-     * @param line 개행을 제외한 물리 파일의 원문 한 행, 필드 순서는 논리코드,접미번호,판매여부
-     * @return 논리코드,접미번호,판매 상태를 담은 중간 행 객체, 판매여부 0은 false, 1은 true로 변환하며 접미번호 000도 의미 검사 전까지 유지
-     * @throws StartupDataException 빈 행, 필드 수 또는 필드 문법에 오류가 있으면 던짐
-     */
+    // 논리코드, 접미번호, 판매여부 순서로 문법 검사
+    // 판매여부는 0/1을 false/true로 변환. 접미번호 000은 의미 검사에서 거절
     public RawPhysicalRow parsePhysicalSyntax(String line) {
         String file = DataPaths.PHYSICAL_FILE;
         if (line.isEmpty()) {
@@ -65,26 +56,13 @@ public class EntityParser {
         return new RawPhysicalRow(fields[0], Integer.parseInt(fields[1]), fields[2].equals("1"));
     }
 
-    /**
-     * 필드 문자열 전체가 정규식과 일치하는지 검사하고 불일치 시 시작 검사 예외를 전달
-     * return void
-     * @param value 공백을 제거하지 않은 파일의 필드 문자열
-     * @param pattern 필드의 허용 문자와 자릿수를 나타내는 정규식
-     * @param file 오류 메시지에 표시할 데이터 파일명
-     * @param reason 문법이 일치하지 않을 때 표시할 허용 규칙
-     */
+    // 공백 제거 없이 필드 전체를 검사. 정규식과 안 맞으면 파일 오류
     private void checkPattern(String value, String pattern, String file, String reason) {
         if (!value.matches(pattern)) {
             throw syntaxError(file, reason);
         }
     }
 
-    /**
-     * 파일명과 문법 오류 이유를 담은 예외를 생성
-     * @param file 문법 오류가 발생한 데이터 파일의 이름
-     * @param reason 위반한 문법 규칙을 설명하는 안내 문구
-     * @return 호출한 위치에서 던질 시작 검사 예외 객체
-     */
     private StartupDataException syntaxError(String file, String reason) {
         return new StartupDataException(List.of(file), reason);
     }

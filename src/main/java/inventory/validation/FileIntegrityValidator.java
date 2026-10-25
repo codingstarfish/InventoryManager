@@ -14,20 +14,15 @@ import inventory.database.RawPhysicalRow;
 import inventory.database.RawLogicalRow;
 import inventory.exception.StartupDataException;
 
-/**
- * 시작 의미·관계 검사. 파일 접근·저장·상태 게시 없이 구체 오류 이유를 전달
- */
+
+// 시작 검사 시에 의미 오류와 데이터 간 관계 오류를 검사한다.
 public class FileIntegrityValidator {
 
     public FileIntegrityValidator() {
     }
 
-    /**
-     * 두 파일의 문법 검사가 끝난 행에 대해 범위, 중복, 연속성, 등록 참조, FIFO와 창고 용량을 검사
-     * @param logicalRows 논리 파일의 문법 검사를 통과한 전체 행 목록, 빈 목록도 허용하며 의미 오류 값은 포함될 수 있음
-     * @param physicalRows 물리 파일의 문법 검사를 통과한 전체 행 목록, 판매된 행도 포함하며 빈 목록도 허용
-     * @throws StartupDataException 값 범위, 가격 단위, 중복, 연속성, 참조, FIFO 또는 창고 용량 규칙을 위반하면 전달
-     */
+    // 두 파일의 문법 검사가 끝난 뒤 값의 범위와 파일 간 관계 검사
+    // 중복/누락/미등록 상품 참조/FIFO/용량 위반이면 StartupDataException
     public void validate(List<RawLogicalRow> logicalRows, List<RawPhysicalRow> physicalRows) {
         Map<String, RawLogicalRow> logical = new TreeMap<>();
         for (RawLogicalRow row : logicalRows) {
@@ -99,23 +94,13 @@ public class FileIntegrityValidator {
         }
     }
 
-    /**
-     * 문법 검사를 통과한 논리코드의 번호가 00000인지 검사
-     * @param code 문법상 대문자 P와 숫자 다섯 자리로 구성된 논리코드
-     * @param file 번호 범위 오류를 표시할 논리 파일 또는 물리 파일의 이름
-     */
+    // 형식은 이미 확인한 상태. 번호 00000만 여기서 거절
     private void validateCode(String code, String file) {
         if (code.equals("P00000")) {
             throw dataError(file, "논리코드의 번호는 00001~99999여야 합니다.");
         }
     }
 
-    /**
-     * 오류 파일명과 구체적인 이유를 담은 시작 검사 예외를 생성
-     * @param file 오류가 발생한 데이터 파일의 이름
-     * @param reason 위반한 범위나 관계 규칙을 설명하는 오류 안내 문구
-     * @return 호출한 위치에서 던질 StartupDataException 객체
-     */
     private StartupDataException dataError(String file, String reason) {
         return new StartupDataException(List.of(file), reason);
     }

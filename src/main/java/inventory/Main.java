@@ -20,12 +20,8 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
-/** 시작 검사 → 공유 데이터와 서비스 구성 → 콘솔 실행, 프로세스 종료는 여기서만 */
 public class Main {
-    /**
-     * 데이터 파일을 검사하고 서비스를 구성한 뒤 콘솔을 실행, 정상 종료와 EOF는 종료 코드 0, 시작 검사 또는 저장 실패는 종료 코드 1로 처리
-     * @param args 사용안함
-     */
+    
     public static void main(String[] args) throws IOException {
         Input input = new Input(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)));
         ConsoleView view = new ConsoleView(new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true));

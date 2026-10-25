@@ -22,9 +22,7 @@ public final class InputPatterns {
 
     public static final String FILE_SOLD = "[01]";
 
-    /**
-     * 상수만 사용하도록 외부의 인스턴스 생성을 막음
-     */
+    
     private InputPatterns() {
     }
 }

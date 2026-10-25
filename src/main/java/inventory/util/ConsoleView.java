@@ -118,6 +118,7 @@ public class ConsoleView {
      * 상품이 없어 입고/판매 불가할 때 안내. QUERY로 호출하면 예외
      *
      * @param purpose 수행할 수 없는 작업. INBOUND 또는 SALE만 허용
+     * @throws IllegalArgumentException purpose가 QUERY인 경우
      */
     public void noProducts(CodePurpose purpose) {
         switch (purpose) {

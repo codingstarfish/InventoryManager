@@ -19,8 +19,12 @@ public class FileAccess {
         this.workingDir = workingDir;
     }
 
-    // data 폴더와 없는 데이터 파일만 생성. 기존 파일은 그대로 둠
-    // 생성이나 접근에 실패하면 StartupDataException
+    /**
+     * data 폴더와 없는 데이터 파일만 생성. 기존 파일은 그대로 둠
+     * 생성이나 접근에 실패하면 StartupDataException
+     *
+     * @throws StartupDataException 데이터 디렉터리·파일을 생성하거나 기존 파일의 존재 여부를 확인할 수 없는 경우
+     */
     public void ensureDataFiles() {
         Path data = workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR);
         try {
@@ -41,8 +45,13 @@ public class FileAccess {
         }
     }
 
-    // 두 파일이 일반 파일인지, 읽기/쓰기가 가능한지 확인
-    // 접근할 수 없으면 StartupDataException
+    /**
+     * 두 파일이 일반 파일인지, 읽기/쓰기가 가능한지 확인
+     * 접근할 수 없으면 StartupDataException
+     *
+     * @throws StartupDataException 데이터 파일 경로가 일반 파일이 아니거나, 읽기·쓰기가 불가능하거나,
+     *         보안 제한으로 파일 상태나 접근 권한을 확인할 수 없는 경우
+     */
     public void checkReadableWritable() {
         for (Path path : List.of(logicalPath(), physicalPath())) {
             String fileName = path.getFileName().toString();

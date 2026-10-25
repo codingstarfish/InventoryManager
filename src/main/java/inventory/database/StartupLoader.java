@@ -39,6 +39,8 @@ public class StartupLoader {
      * 검사 실패 시 StartupDataException. 적재 후 낱개는 접미번호순으로 정렬
      *
      * @param db 검사를 통과한 상품과 낱개 데이터를 추가할 DB
+     * @throws StartupDataException 데이터 디렉터리·파일을 생성하거나 파일에 접근할 수 없거나,
+     *         인코딩·BOM·행 형식 또는 값 범위·중복·번호 연속성·상품 참조·판매 순서·창고 용량 검사가 실패한 경우
      */
     public void load(InventoryDatabase db) {
         access.ensureDataFiles();
@@ -73,6 +75,7 @@ public class StartupLoader {
      *
      * @param path 읽을 데이터 파일의 경로
      * @return 개행 문자를 제외하고 파일 순서대로 읽은 행 목록
+     * @throws StartupDataException 파일을 읽거나 닫을 수 없거나, 올바른 UTF-8이 아니거나 첫 행에 BOM이 있는 경우
      */
     private List<String> readStrictLines(Path path) {
         String name = path.getFileName().toString();

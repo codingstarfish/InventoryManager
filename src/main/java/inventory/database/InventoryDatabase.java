@@ -47,6 +47,7 @@ public class InventoryDatabase {
      *
      * @param code 조회할 상품의 논리코드
      * @return 해당 논리코드로 등록된 상품 정보
+     * @throws BusinessRuleException 해당 논리코드로 등록된 상품이 없는 경우(CODE_NOT_FOUND)
      */
     public LogicalItem requireItem(String code) {
         LogicalItem item = logicalItems.get(code);
@@ -82,6 +83,7 @@ public class InventoryDatabase {
      *
      * @param code 수량을 집계할 상품의 논리코드
      * @return 상품 정보와 누적 입고·누적 판매 수량을 담은 요약
+     * @throws BusinessRuleException 해당 논리코드로 등록된 상품이 없는 경우(CODE_NOT_FOUND)
      */
     public StockSummary summarize(String code) {
         LogicalItem item = requireItem(code);
@@ -112,12 +114,20 @@ public class InventoryDatabase {
         return new WarehouseSummary(used);
     }
 
-    // 등록할 때 논리 파일만 저장
+    /**
+     * 등록할 때 논리 파일만 저장
+     *
+     * @throws inventory.exception.SaveFailureException 논리 파일을 열거나 쓰거나 닫는 데 실패한 경우
+     */
     public void saveLogical() {
         writer.writeLogical(logicalItems.values());
     }
 
-    // 입고/판매 후 전체 낱개를 물리 파일에 저장
+    /**
+     * 입고/판매 후 전체 낱개를 물리 파일에 저장
+     *
+     * @throws inventory.exception.SaveFailureException 물리 파일을 열거나 쓰거나 닫는 데 실패한 경우
+     */
     public void savePhysical() {
         List<PhysicalItem> rows = physicalByCode.values().stream()
                 .flatMap(List::stream).toList();

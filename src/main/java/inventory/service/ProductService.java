@@ -39,6 +39,7 @@ public class ProductService {
      * @param size 범위 검증을 마친 상품 한 개의 크기(용량 단위)
      * @param price 범위와 10원 단위 검증을 마친 상품 가격(원)
      * @return 새 논리코드가 부여되어 등록된 상품
+     * @throws inventory.exception.SaveFailureException 등록한 상품을 논리 파일에 저장하지 못한 경우
      */
     public LogicalItem register(String name, int size, int price) {
         LogicalItem item = new LogicalItem(DomainRules.formatLogicalCode(db.size() + 1), name, size, price);

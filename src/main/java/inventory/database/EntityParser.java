@@ -18,6 +18,7 @@ public class EntityParser {
      *
      * @param line 논리 파일에서 읽은 개행 문자를 제외한 한 행
      * @return 문법 검사를 통과한 상품명·논리코드·크기·가격(원) 데이터
+     * @throws StartupDataException 빈 행이거나 필드 수·상품명·논리코드·크기·가격 형식이 잘못된 경우
      */
     public RawLogicalRow parseLogicalSyntax(String line) {
         String file = DataPaths.LOGICAL_FILE;
@@ -47,6 +48,7 @@ public class EntityParser {
      *
      * @param line 물리 파일에서 읽은 개행 문자를 제외한 한 행
      * @return 문법 검사를 통과한 논리코드·접미번호·판매여부 데이터
+     * @throws StartupDataException 빈 행이거나 필드 수·논리코드·접미번호·판매여부 형식이 잘못된 경우
      */
     public RawPhysicalRow parsePhysicalSyntax(String line) {
         String file = DataPaths.PHYSICAL_FILE;
@@ -73,6 +75,7 @@ public class EntityParser {
      * @param pattern 필드 전체가 일치해야 하는 정규식
      * @param file 오류가 발생한 데이터 파일명
      * @param reason 정규식 불일치 시 전달할 오류 설명
+     * @throws StartupDataException 필드 전체가 지정한 정규식과 일치하지 않는 경우
      */
     private void checkPattern(String value, String pattern, String file, String reason) {
         if (!value.matches(pattern)) {

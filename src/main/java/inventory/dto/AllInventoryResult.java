@@ -12,6 +12,7 @@ public record AllInventoryResult(List<StockSummary> items, WarehouseSummary ware
      * 조회 결과 목록을 밖에서 수정하지 못하게 복사
      * @param items 복사해 보관할 상품별 수량 요약 목록. null 및 null 원소는 허용하지 않음
      * @param warehouse 조회 시점의 창고 사용량
+     * @throws NullPointerException items가 null이거나 목록에 null 원소가 포함된 경우
      */
     public AllInventoryResult {
         items = List.copyOf(items);

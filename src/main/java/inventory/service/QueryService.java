@@ -30,6 +30,7 @@ public class QueryService {
      *
      * @param code 조회할 등록 상품의 논리코드
      * @return 선택 상품의 재고 요약과 판매 기록을 포함한 접미번호순 낱개 목록
+     * @throws inventory.exception.BusinessRuleException 상품이 등록되어 있지 않으면 {@code CODE_NOT_FOUND}
      */
     public ItemDetail findOne(String code) {
         return new ItemDetail(db.summarize(code), db.findPhysicalItems(code));

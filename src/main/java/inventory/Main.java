@@ -26,6 +26,9 @@ public class Main {
      * 재고 관리 프로그램을 시작한다.
      *
      * @param args 명령행 인자. 현재는 사용하지 않음
+     * @throws IOException 콘솔 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws IllegalStateException 검증된 주 메뉴 번호가 1~5가 아닌 경우
+     * @throws inventory.exception.BusinessRuleException 콘솔 입력 단계에서 처리하지 않는 업무 오류가 전파된 경우
      */
     public static void main(String[] args) throws IOException {
         Input input = new Input(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)));

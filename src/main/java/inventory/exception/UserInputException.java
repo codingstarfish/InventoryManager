@@ -10,11 +10,18 @@ public class UserInputException extends RuntimeException {
     /** 해당 필드의 입력 오류 코드 */
     private final ErrorCode code;
 
+    /**
+     * 입력값의 문법·범위·단위 오류 코드를 보관
+     * @param code 입력 필드가 위반한 문법, 값 범위 또는 단위 규칙의 오류 코드
+     */
     public UserInputException(ErrorCode code) {
         super(code.name());
         this.code = code;
     }
 
+    /**
+     * @return 입력값이 위반한 규칙을 나타내는 오류 코드
+     */
     public ErrorCode code() {
         return code;
     }

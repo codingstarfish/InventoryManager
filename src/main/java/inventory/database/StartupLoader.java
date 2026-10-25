@@ -25,14 +25,21 @@ public class StartupLoader {
     /** 의미·관계 검사 */
     private final FileIntegrityValidator validator;
 
+    /**
+     * @param access 데이터 파일의 생성·접근 검사와 경로 조회를 담당하는 객체
+     */
     public StartupLoader(FileAccess access) {
         this.access = access;
         this.parser = new EntityParser();
         this.validator = new FileIntegrityValidator();
     }
 
-    // 파일 생성/접근 확인 → 두 파일 문법 검사 → 의미 검사 → DB에 적재
-    // 검사 실패 시 StartupDataException. 적재 후 낱개는 접미번호순으로 정렬
+    /**
+     * 파일 생성/접근 확인 → 두 파일 문법 검사 → 의미 검사 → DB에 적재
+     * 검사 실패 시 StartupDataException. 적재 후 낱개는 접미번호순으로 정렬
+     *
+     * @param db 검사를 통과한 상품과 낱개 데이터를 추가할 DB
+     */
     public void load(InventoryDatabase db) {
         access.ensureDataFiles();
         access.checkReadableWritable();
@@ -59,9 +66,14 @@ public class StartupLoader {
         }
     }
 
-    // UTF-8 오류와 파일 시작의 BOM을 거절. 공백과 대소문자는 그대로 읽음
-    // LF/CR/CRLF 혼용 허용. 마지막 개행 하나는 빈 행으로 세지 않음
-    // 읽기 실패나 인코딩/BOM 오류는 StartupDataException
+    /**
+     * UTF-8 오류와 파일 시작의 BOM을 거절. 공백과 대소문자는 그대로 읽음
+     * LF/CR/CRLF 혼용 허용. 마지막 개행 하나는 빈 행으로 세지 않음
+     * 읽기 실패나 인코딩/BOM 오류는 StartupDataException
+     *
+     * @param path 읽을 데이터 파일의 경로
+     * @return 개행 문자를 제외하고 파일 순서대로 읽은 행 목록
+     */
     private List<String> readStrictLines(Path path) {
         String name = path.getFileName().toString();
         List<String> lines = new ArrayList<>();

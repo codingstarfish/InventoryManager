@@ -22,6 +22,11 @@ import java.nio.file.Path;
 
 public class Main {
     
+    /**
+     * 재고 관리 프로그램을 시작한다.
+     *
+     * @param args 명령행 인자. 현재는 사용하지 않음
+     */
     public static void main(String[] args) throws IOException {
         Input input = new Input(new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8)));
         ConsoleView view = new ConsoleView(new PrintWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8), true));

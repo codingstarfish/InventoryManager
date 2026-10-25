@@ -9,12 +9,19 @@ public class SaveFailureException extends RuntimeException {
     /** 저장에 실패한 대상 파일명 */
     private final String fileName;
 
-    // 실패한 파일명과 실제 원인(IOException/SecurityException)을 같이 보관
+    /**
+     * 실패한 파일명과 실제 원인(IOException/SecurityException)을 같이 보관
+     * @param fileName 저장에 실패한 대상 파일명
+     * @param cause 저장 실패의 실제 원인 예외
+     */
     public SaveFailureException(String fileName, Throwable cause) {
         super(fileName + " 저장 실패", cause);
         this.fileName = fileName;
     }
 
+    /**
+     * @return 저장에 실패한 대상 파일명
+     */
     public String fileName() {
         return fileName;
     }

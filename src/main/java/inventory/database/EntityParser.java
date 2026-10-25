@@ -11,9 +11,14 @@ public class EntityParser {
     public EntityParser() {
     }
 
-    // 상품명, 논리코드, 크기, 가격 순서로 문법 검사
-    // P00000, 크기 1001, 가격 1 같은 값은 의미 검사에서 걸러짐
-    // 문법이 틀리면 StartupDataException
+    /**
+     * 상품명, 논리코드, 크기, 가격 순서로 문법 검사
+     * P00000, 크기 1001, 가격 1 같은 값은 의미 검사에서 걸러짐
+     * 문법이 틀리면 StartupDataException
+     *
+     * @param line 논리 파일에서 읽은 개행 문자를 제외한 한 행
+     * @return 문법 검사를 통과한 상품명·논리코드·크기·가격(원) 데이터
+     */
     public RawLogicalRow parseLogicalSyntax(String line) {
         String file = DataPaths.LOGICAL_FILE;
         if (line.isEmpty()) {
@@ -36,8 +41,13 @@ public class EntityParser {
         return new RawLogicalRow(fields[0], fields[1], Integer.parseInt(fields[2]), Integer.parseInt(fields[3]));
     }
 
-    // 논리코드, 접미번호, 판매여부 순서로 문법 검사
-    // 판매여부는 0/1을 false/true로 변환. 접미번호 000은 의미 검사에서 거절
+    /**
+     * 논리코드, 접미번호, 판매여부 순서로 문법 검사
+     * 판매여부는 0/1을 false/true로 변환. 접미번호 000은 의미 검사에서 거절
+     *
+     * @param line 물리 파일에서 읽은 개행 문자를 제외한 한 행
+     * @return 문법 검사를 통과한 논리코드·접미번호·판매여부 데이터
+     */
     public RawPhysicalRow parsePhysicalSyntax(String line) {
         String file = DataPaths.PHYSICAL_FILE;
         if (line.isEmpty()) {
@@ -56,13 +66,25 @@ public class EntityParser {
         return new RawPhysicalRow(fields[0], Integer.parseInt(fields[1]), fields[2].equals("1"));
     }
 
-    // 공백 제거 없이 필드 전체를 검사. 정규식과 안 맞으면 파일 오류
+    /**
+     * 공백 제거 없이 필드 전체를 검사. 정규식과 안 맞으면 파일 오류
+     *
+     * @param value 검사할 필드의 원문 값
+     * @param pattern 필드 전체가 일치해야 하는 정규식
+     * @param file 오류가 발생한 데이터 파일명
+     * @param reason 정규식 불일치 시 전달할 오류 설명
+     */
     private void checkPattern(String value, String pattern, String file, String reason) {
         if (!value.matches(pattern)) {
             throw syntaxError(file, reason);
         }
     }
 
+    /**
+     * @param file 문법 오류가 발생한 데이터 파일명
+     * @param reason 문법 오류의 원인 설명
+     * @return 해당 파일명과 원인을 담은 시작 데이터 예외
+     */
     private StartupDataException syntaxError(String file, String reason) {
         return new StartupDataException(List.of(file), reason);
     }

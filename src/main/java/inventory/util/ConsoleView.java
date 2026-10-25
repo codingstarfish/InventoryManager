@@ -19,6 +19,11 @@ public class ConsoleView {
     
     private final PrintWriter out;
 
+    /**
+     * 화면 안내를 기록할 출력 채널 보관
+     *
+     * @param out 프롬프트, 오류 안내, 처리 결과를 기록할 출력 채널
+     */
     public ConsoleView(PrintWriter out) {
         this.out = out;
     }
@@ -39,7 +44,11 @@ public class ConsoleView {
         out.flush();
     }
 
-    // 입력 항목에 맞는 프롬프트 출력
+    /**
+     * 입력 항목에 맞는 프롬프트 출력
+     *
+     * @param field 상품명·크기·가격·수량·조회 방식·재입력 확인 중 입력받을 항목
+     */
     public void prompt(Field field) {
         String text = switch (field) {
             case NAME -> "신규 상품명";
@@ -54,7 +63,11 @@ public class ConsoleView {
         out.flush();
     }
 
-    // 작업에 맞는 상품코드 입력 프롬프트 출력
+    /**
+     * 작업에 맞는 상품코드 입력 프롬프트 출력
+     *
+     * @param purpose 논리코드를 입력받는 목적. INBOUND, SALE, QUERY 중 하나
+     */
     public void promptCode(CodePurpose purpose) {
         String text = switch (purpose) {
             case INBOUND -> "입고할 논리적 상품코드";
@@ -65,8 +78,13 @@ public class ConsoleView {
         out.flush();
     }
 
-    // 오류 코드에 맞는 안내 출력
-    // details: 접미번호 부족은 issuable, 용량 부족은 required/remaining, 재고 부족은 current
+    /**
+     * 오류 코드에 맞는 안내 출력
+     *
+     * @param code 입력 형식·값 범위·업무 조건의 위반을 나타내는 오류 코드
+     * @param details 오류 문구에 넣을 수치. 접미번호 부족은 issuable, 용량 부족은
+     *                required/remaining, 재고 부족은 current를 사용하며 나머지는 빈 Map
+     */
     public void error(ErrorCode code, Map<String, Long> details) {
         String message = switch (code) {
             case MENU_SYNTAX -> "메뉴는 1~5 중 하나를 입력해야 합니다.";
@@ -96,8 +114,11 @@ public class ConsoleView {
     }
 
     
-    // 상품이 없어 입고/판매 불가할 때 안내
-    // QUERY로 들어오면 개발자가 잘못 호출한 것이므로 예외
+    /**
+     * 상품이 없어 입고/판매 불가할 때 안내. QUERY로 호출하면 예외
+     *
+     * @param purpose 수행할 수 없는 작업. INBOUND 또는 SALE만 허용
+     */
     public void noProducts(CodePurpose purpose) {
         switch (purpose) {
             case INBOUND -> line("등록된 상품이 없어 입고할 수 없습니다. 먼저 상품을 등록해야 합니다.");
@@ -106,32 +127,51 @@ public class ConsoleView {
         }
     }
 
-    // 선택한 상품명과 현재 재고 출력
+    /**
+     * 선택한 상품명과 현재 재고 출력
+     *
+     * @param summary 입고·판매 대상으로 선택한 상품 정보와 최신 수량 요약
+     */
     public void selected(StockSummary summary) {
         line("상품명: " + summary.item().name() + ", 현재 재고: " + summary.current() + "개");
     }
 
-    // 등록 완료와 신규 상품 정보 출력
+    /**
+     * 등록 완료와 신규 상품 정보 출력
+     *
+     * @param item 논리 파일에 저장을 마친 신규 등록 상품
+     */
     public void registered(LogicalItem item) {
         line("신규 상품이 등록되었습니다.");
         line("논리코드: " + item.code() + ", 상품명: " + item.name()
                 + ", 크기: " + item.size() + ", 가격: " + item.price() + "원, 현재 재고: 0개");
     }
 
-    // 입고 수량과 입고 후 재고 출력
+    /**
+     * 입고 수량과 입고 후 재고 출력
+     *
+     * @param result 저장에 성공한 입고 수량과 입고 후 현재 재고
+     */
     public void received(StockChangeResult result) {
         line("입고가 완료되었습니다. (입고 수량: " + result.quantity()
                 + "개, 현재 재고: " + result.currentAfter() + "개)");
     }
 
-    // 판매 수량과 판매 후 재고 출력
+    /**
+     * 판매 수량과 판매 후 재고 출력
+     *
+     * @param result 저장에 성공한 판매 수량과 판매 후 현재 재고
+     */
     public void sold(StockChangeResult result) {
         line("판매가 완료되었습니다. (판매 수량: " + result.quantity()
                 + "개, 현재 재고: " + result.currentAfter() + "개)");
     }
 
-    // 상품별 요약과 창고 사용량/남은 용량 출력
-    // 상품이 없으면 빈 목록 안내
+    /**
+     * 상품별 요약과 창고 사용량/남은 용량 출력. 상품이 없으면 빈 목록 안내
+     *
+     * @param result 논리코드순 상품 요약 목록과 창고 용량을 담은 전체 조회 결과
+     */
     public void allInventory(AllInventoryResult result) {
         if (result.items().isEmpty()) {
             line("등록된 상품이 없습니다.");
@@ -142,8 +182,11 @@ public class ConsoleView {
         line("창고 사용 용량: " + result.warehouse().used() + ", 남은 용량: " + result.warehouse().remaining());
     }
 
-    // 상품 요약과 낱개별 판매여부 출력
-    // 입고 기록이 없으면 따로 안내
+    /**
+     * 상품 요약과 낱개별 판매여부 출력. 입고 기록이 없으면 따로 안내
+     *
+     * @param result 선택 상품의 요약과 판매된 낱개도 포함한 접미번호순 낱개 목록
+     */
     public void itemDetail(ItemDetail result) {
         line(formatSummary(result.summary()));
         if (result.physicalItems().isEmpty()) {
@@ -154,8 +197,12 @@ public class ConsoleView {
         }
     }
 
-    // 상품 한 종류의 조회 결과를 한 줄로 조합
-    // 다음 접미번호는 세 자리로 표시하고, 소진되면 없음으로 표시
+    /**
+     * 상품 한 종류의 조회 결과를 한 줄로 조합
+     *
+     * @param summary 표시할 상품 정보와 누적 입고·판매 수량 요약
+     * @return 상품 정보와 수량을 조합한 한 줄 문자열. 다음 접미번호는 세 자리이며 소진되면 없음으로 표시
+     */
     private String formatSummary(StockSummary summary) {
         var item = summary.item();
         String next = summary.nextSuffix().isPresent()
@@ -178,13 +225,21 @@ public class ConsoleView {
         line("[INFO] 무결성 검사 완료. 프로그램을 시작합니다.");
     }
 
-    // 시작 검사 시 오류 파일들과 이유 출력
+    /**
+     * 시작 검사 시 오류 파일들과 이유 출력
+     *
+     * @param e 시작 파일 생성·접근·문법·의미 검사에서 발생한 예외. 파일명과 오류 이유를 사용
+     */
     public void startupFailed(StartupDataException e) {
         line("[오류] " + String.join(" / ", e.fileNames()) + ": " + e.reason());
         line("데이터 파일 오류로 프로그램을 종료합니다.");
     }
 
-    // 파일 저장 실패 시 
+    /**
+     * 파일 저장 실패 안내 출력
+     *
+     * @param e 논리·물리 파일 저장 중 발생한 예외. 저장에 실패한 파일명을 사용
+     */
     public void saveFailed(SaveFailureException e) {
         line("[오류] " + e.fileName() + " 저장에 실패했습니다. 작업을 완료하지 못했습니다.");
         line("프로그램을 종료합니다.");
@@ -205,6 +260,11 @@ public class ConsoleView {
         line("입력이 종료되어 프로그램을 종료합니다.");
     }
 
+    /**
+     * 한 줄을 출력하고 출력 버퍼를 비움
+     *
+     * @param text 개행을 붙여 출력할 안내 또는 결과 문자열
+     */
     private void line(String text) {
         out.println(text);
         out.flush();

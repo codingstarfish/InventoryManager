@@ -28,7 +28,16 @@ public class Console {
     private final ConsoleView view;
 
     
-    // 입력/검증/서비스/출력 객체 보관
+    /**
+     * 입력/검증/서비스/출력 객체 보관
+     *
+     * @param input 사용자 입력을 한 줄씩 읽는 입력 채널
+     * @param validator 입력 문자열의 형식과 값 범위를 검사하는 검증기
+     * @param productService 신규 상품 등록과 등록 가능 여부를 처리하는 서비스
+     * @param stockService 재고 입고와 상품 판매를 처리하는 서비스
+     * @param queryService 전체 재고와 단일 상품을 조회하는 서비스
+     * @param view 프롬프트, 오류 안내, 처리 결과를 출력하는 객체
+     */
     public Console(Input input, InputValidator validator, ProductService productService, StockService stockService, QueryService queryService, ConsoleView view) {
         this.input = input;
         this.validator = validator;
@@ -38,8 +47,12 @@ public class Console {
         this.view = view;
     }
 
-    // 주 메뉴 반복. EOF는 0, 저장 실패는 1 반환
-    // 실제 프로세스 종료는 Main에서 처리. 입력 IOException은 호출한 곳으로 전달
+    /**
+     * 주 메뉴 반복. 실제 프로세스 종료는 Main에서 처리
+     *
+     * @return 정상 종료 또는 EOF이면 0, 파일 저장 실패이면 1인 종료 코드
+     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     */
     public int run() throws IOException {
         try {
             while (true) {
@@ -142,7 +155,12 @@ public class Console {
         }
     }
 
-    // y면 재입력, n이면 취소. 다른 입력이면 y/n부터 다시 받음
+    /**
+     * y면 재입력, n이면 취소. 다른 입력이면 y/n부터 다시 받음
+     *
+     * @return 재입력을 선택한 y이면 true, 작업 취소를 선택한 n이면 false
+     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     */
     private boolean askRetry() throws IOException {
         while (true) {
             view.prompt(Field.RETRY);
@@ -154,9 +172,15 @@ public class Console {
         }
     }
 
-    // 입력 오류나 해당 단계의 업무 오류면 재입력 확인. n이면 Optional.empty() 반환
-    // parse는 검증만 하거나, 수량 입력처럼 서비스 호출까지 처리
-    // 예상한 업무 오류만 여기서 처리하고 나머지는 다시 던짐
+    /**
+     * 입력 오류나 해당 단계의 업무 오류면 재입력 확인. 예상하지 않은 업무 오류는 다시 던짐
+     *
+     * @param <T> 입력을 검증·변환하거나 업무를 처리해 얻는 결과의 자료형
+     * @param field 표시할 프롬프트와 재입력 가능한 업무 오류를 구분하는 입력 항목
+     * @param parse 원문 입력을 검증·변환하는 함수. 수량 입력에서는 입고·판매 처리도 수행
+     * @return 처리에 성공한 값을 담은 Optional, 사용자가 취소하면 Optional.empty()
+     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     */
     private <T> Optional<T> readValue(Field field, Function<String, T> parse) throws IOException {
         while (true) {
             view.prompt(field);
@@ -180,8 +204,15 @@ public class Console {
         }
     }
 
-    // 코드 형식/범위/등록 여부 확인 후 상품 선택
-    // 미등록 코드는 재입력 확인. 입고 접미번호 소진이면 바로 Optional.empty() 반환
+    /**
+     * 코드 형식/범위/등록 여부 확인 후 상품 선택. 미등록 코드는 재입력 확인
+     *
+     * @param <T> 논리코드로 상품을 선택하거나 조회해 얻는 결과의 자료형
+     * @param purpose 코드 입력 목적. 입고·판매·조회 프롬프트와 입고 접미번호 소진 시 흐름을 결정
+     * @param select 검증된 논리코드로 등록 여부를 확인하고 상품을 선택·조회하는 함수
+     * @return 선택한 결과를 담은 Optional, 취소하거나 입고 접미번호가 소진되면 Optional.empty()
+     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     */
     private <T> Optional<T> readCode(CodePurpose purpose, Function<String, T> select) throws IOException {
         while (true) {
             view.promptCode(purpose);

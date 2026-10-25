@@ -12,6 +12,9 @@ public class FileAccess {
     /** 실제 작업 디렉터리 */
     private final Path workingDir;
 
+    /**
+     * @param workingDir data 폴더를 찾거나 생성할 기준 작업 디렉터리
+     */
     public FileAccess(Path workingDir) {
         this.workingDir = workingDir;
     }
@@ -61,12 +64,20 @@ public class FileAccess {
         }
     }
 
-    // 작업 디렉터리/data/logical_item.txt의 절대 경로
+    /**
+     * 작업 디렉터리/data/logical_item.txt의 절대 경로
+     *
+     * @return 논리 상품 데이터 파일의 절대 경로
+     */
     public Path logicalPath() {
         return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.LOGICAL_FILE);
     }
 
-    // 작업 디렉터리/data/physical_item.txt의 절대 경로
+    /**
+     * 작업 디렉터리/data/physical_item.txt의 절대 경로
+     *
+     * @return 낱개 데이터 파일의 절대 경로
+     */
     public Path physicalPath() {
         return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.PHYSICAL_FILE);
     }

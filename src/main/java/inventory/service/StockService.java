@@ -14,11 +14,19 @@ import java.util.Map;
 public class StockService {
     private final InventoryDatabase db;
 
+    /**
+     * @param db 입고와 판매를 처리하고 저장할 데이터베이스
+     */
     public StockService(InventoryDatabase db) {
         this.db = db;
     }
 
-    // 누적 입고가 999개면 상품 선택 단계에서 바로 거절
+    /**
+     * 누적 입고가 999개면 상품 선택 단계에서 바로 거절
+     *
+     * @param code 입고할 등록 상품의 논리코드
+     * @return 접미번호를 추가 발급할 수 있는 선택 상품의 현재 재고 요약
+     */
     public StockSummary selectInbound(String code) {
         StockSummary summary = db.summarize(code);
         if (summary.received() == Limits.MAX_SUFFIX) {
@@ -27,13 +35,23 @@ public class StockService {
         return summary;
     }
 
-    // 재고 0개인 상품도 선택 가능. 수량 입력 후 재고 부족 안내
+    /**
+     * 재고 0개인 상품도 선택 가능. 수량 입력 후 재고 부족 안내
+     *
+     * @param code 판매할 등록 상품의 논리코드
+     * @return 선택 상품의 현재 재고 요약
+     */
     public StockSummary selectSale(String code) {
         return db.summarize(code);
     }
 
-    // summary는 최신 조회 결과, quantity는 1~100 검증을 마친 값이어야 함
-    // 발급 가능 수와 창고 용량을 확인한 뒤 입고하고 저장
+    /**
+     * 발급 가능 수와 창고 용량을 확인한 뒤 입고하고 저장
+     *
+     * @param summary 입고할 상품의 최신 재고 요약
+     * @param quantity 1~100 범위 검증을 마친 입고 수량(개)
+     * @return 입고한 수량과 입고 후 현재 재고 수량
+     */
     public StockChangeResult receive(StockSummary summary, int quantity) {
         if (quantity > summary.issuable()) {
             throw new BusinessRuleException(ErrorCode.SUFFIX_SHORTAGE, Map.of("issuable", (long) summary.issuable()));
@@ -53,8 +71,13 @@ public class StockService {
         return new StockChangeResult(quantity, summary.current() + quantity);
     }
 
-    // summary는 최신 조회 결과, quantity는 1~100 검증을 마친 값이어야 함
-    // 재고 확인 후 접미번호가 작은 미판매 낱개부터 판매하고 저장
+    /**
+     * 재고 확인 후 접미번호가 작은 미판매 낱개부터 판매하고 저장
+     *
+     * @param summary 판매할 상품의 최신 재고 요약
+     * @param quantity 1~100 범위 검증을 마친 판매 수량(개)
+     * @return 판매한 수량과 판매 후 현재 재고 수량
+     */
     public StockChangeResult sell(StockSummary summary, int quantity) {
         if (quantity > summary.current()) {
             throw new BusinessRuleException(ErrorCode.STOCK_SHORTAGE, Map.of("current", (long) summary.current()));

@@ -21,8 +21,13 @@ public class FileIntegrityValidator {
     public FileIntegrityValidator() {
     }
 
-    // 두 파일의 문법 검사가 끝난 뒤 값의 범위와 파일 간 관계 검사
-    // 중복/누락/미등록 상품 참조/FIFO/용량 위반이면 StartupDataException
+    /**
+     * 두 파일의 문법 검사가 끝난 뒤 값의 범위와 파일 간 관계 검사
+     * 중복/누락/미등록 상품 참조/FIFO/용량 위반이면 StartupDataException
+     *
+     * @param logicalRows 문법 검사를 통과한 논리 파일의 상품 행 목록
+     * @param physicalRows 문법 검사를 통과한 물리 파일의 낱개 상품 행 목록
+     */
     public void validate(List<RawLogicalRow> logicalRows, List<RawPhysicalRow> physicalRows) {
         Map<String, RawLogicalRow> logical = new TreeMap<>();
         for (RawLogicalRow row : logicalRows) {
@@ -94,13 +99,23 @@ public class FileIntegrityValidator {
         }
     }
 
-    // 형식은 이미 확인한 상태. 번호 00000만 여기서 거절
+    /**
+     * 형식은 이미 확인한 상태. 번호 00000만 여기서 거절
+     *
+     * @param code P와 숫자 다섯 자리 형식 검증을 마친 논리코드
+     * @param file 오류에 표시할 원본 데이터 파일명
+     */
     private void validateCode(String code, String file) {
         if (code.equals("P00000")) {
             throw dataError(file, "논리코드의 번호는 00001~99999여야 합니다.");
         }
     }
 
+    /**
+     * @param file 오류가 발생한 데이터 파일명
+     * @param reason 데이터 검증에 실패한 이유
+     * @return 파일명과 실패 이유를 담은 시작 데이터 오류
+     */
     private StartupDataException dataError(String file, String reason) {
         return new StartupDataException(List.of(file), reason);
     }

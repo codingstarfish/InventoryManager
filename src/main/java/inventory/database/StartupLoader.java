@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Comparator;
+
 import inventory.entity.LogicalItem;
 import inventory.entity.PhysicalItem;
 import inventory.exception.StartupDataException;
@@ -18,11 +19,17 @@ import inventory.validation.FileIntegrityValidator;
 
 // 시작할 때 파일을 검사하고, 통과한 데이터만 DB에 넣음
 public class StartupLoader {
-    /** 시작 생성,접근 및 경로 */
+    /**
+     * 시작 생성,접근 및 경로
+     */
     private final FileAccess access;
-    /** 문법 단계 변환 */
+    /**
+     * 문법 단계 변환
+     */
     private final EntityParser parser;
-    /** 의미·관계 검사 */
+    /**
+     * 의미·관계 검사
+     */
     private final FileIntegrityValidator validator;
 
     /**
@@ -40,7 +47,7 @@ public class StartupLoader {
      *
      * @param db 검사를 통과한 상품과 낱개 데이터를 추가할 DB
      * @throws StartupDataException 데이터 디렉터리·파일을 생성하거나 파일에 접근할 수 없거나,
-     *         인코딩·BOM·행 형식 또는 값 범위·중복·번호 연속성·상품 참조·판매 순서·창고 용량 검사가 실패한 경우
+     *                              인코딩·BOM·행 형식 또는 값 범위·중복·번호 연속성·상품 참조·판매 순서·창고 용량 검사가 실패한 경우
      */
     public void load(InventoryDatabase db) {
         access.ensureDataFiles();
@@ -55,7 +62,7 @@ public class StartupLoader {
         for (String line : physicalLines) {
             physicalRows.add(parser.parsePhysicalSyntax(line));
         }
-        String dateText=parser.parseDateSyntax(readStrictLines(access.datePath()));
+        String dateText = parser.parseDateSyntax(readStrictLines(access.datePath()));
         validator.validate(logicalRows, physicalRows, dateText);
         db.loadDate(java.util.Optional.ofNullable(dateText).map(java.time.LocalDate::parse));
         for (RawLogicalRow row : logicalRows) {

@@ -35,8 +35,8 @@ public class ProductService {
     /**
      * 입력값은 검증을 마친 상태. 다음 논리코드를 붙여 등록하고 논리 파일만 저장
      *
-     * @param name 형식 검증을 마친 상품명
-     * @param size 범위 검증을 마친 상품 한 개의 크기(용량 단위)
+     * @param name  형식 검증을 마친 상품명
+     * @param size  범위 검증을 마친 상품 한 개의 크기(용량 단위)
      * @param price 범위와 10원 단위 검증을 마친 상품 가격(원)
      * @return 새 논리코드가 부여되어 등록된 상품
      * @throws inventory.exception.SaveFailureException 등록한 상품을 논리 파일에 저장하지 못한 경우

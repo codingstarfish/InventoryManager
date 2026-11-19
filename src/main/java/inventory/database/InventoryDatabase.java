@@ -6,21 +6,34 @@ import inventory.entity.LogicalItem;
 import inventory.entity.PhysicalItem;
 import inventory.exception.BusinessRuleException;
 import inventory.literal.ErrorCode;
+
 import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**  Map과 List로 현재 데이터를 관리하고, 변경한 종류의 파일만 저장 */
+/**
+ * Map과 List로 현재 데이터를 관리하고, 변경한 종류의 파일만 저장
+ */
 public class InventoryDatabase {
     private final Map<String, LogicalItem> logicalItems = new HashMap<>();
     private final Map<String, List<PhysicalItem>> physicalByCode = new HashMap<>();
     private final EntityWriter writer;
     private java.util.Optional<java.time.LocalDate> virtualDate = java.util.Optional.empty();
-    public java.util.Optional<java.time.LocalDate> currentDate() { return virtualDate; }
-    public void loadDate(java.util.Optional<java.time.LocalDate> day) { virtualDate=day; }
-    public void saveDate(java.time.LocalDate day) { writer.writeDate(day); virtualDate=java.util.Optional.of(day); }
+
+    public java.util.Optional<java.time.LocalDate> currentDate() {
+        return virtualDate;
+    }
+
+    public void loadDate(java.util.Optional<java.time.LocalDate> day) {
+        virtualDate = day;
+    }
+
+    public void saveDate(java.time.LocalDate day) {
+        writer.writeDate(day);
+        virtualDate = java.util.Optional.of(day);
+    }
 
     /**
      * @param writer 변경된 상품·낱개 데이터를 파일에 저장하는 객체
@@ -98,7 +111,7 @@ public class InventoryDatabase {
                 sold++;
             }
         }
-        return new StockSummary(item, rows.size(), sold, (int)rows.stream().filter(r -> r.state()==inventory.entity.ItemState.DISCARDED).count());
+        return new StockSummary(item, rows.size(), sold, (int) rows.stream().filter(r -> r.state() == inventory.entity.ItemState.DISCARDED).count());
     }
 
     /**
@@ -110,7 +123,7 @@ public class InventoryDatabase {
         long used = 0;
         for (LogicalItem item : logicalItems.values()) {
             for (PhysicalItem row : findPhysicalItems(item.code())) {
-                if (row.state()==inventory.entity.ItemState.IN_STOCK) {
+                if (row.state() == inventory.entity.ItemState.IN_STOCK) {
                     used += item.size();
                 }
             }

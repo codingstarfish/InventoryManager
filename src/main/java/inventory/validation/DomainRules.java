@@ -1,14 +1,17 @@
 package inventory.validation;
 
 import java.util.Locale;
+
 // 논리코드와 접미번호 자릿수 맞추기. 값은 다른 검증기에서 먼저 확인
 public final class DomainRules {
     public static java.util.Optional<java.time.LocalDate> expiry(inventory.entity.LogicalItem item, inventory.entity.PhysicalItem unit) {
-        return item.shelfLifeDays()==0 ? java.util.Optional.empty() : java.util.Optional.of(unit.producedOn().plusDays(item.shelfLifeDays()));
+        return item.shelfLifeDays() == 0 ? java.util.Optional.empty() : java.util.Optional.of(unit.producedOn().plusDays(item.shelfLifeDays()));
     }
+
     public static long salePrice(inventory.entity.LogicalItem item, inventory.entity.PhysicalItem unit) {
-        return unit.refunded() ? Math.max(10, (item.price() * (long) inventory.literal.Limits.RESALE_PERCENT / 1000)*10) : item.price();
+        return unit.refunded() ? Math.max(10, (item.price() * (long) inventory.literal.Limits.RESALE_PERCENT / 1000) * 10) : item.price();
     }
+
     private DomainRules() {
     }
 

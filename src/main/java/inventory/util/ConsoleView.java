@@ -11,6 +11,7 @@ import inventory.dto.StockChangeResult;
 import inventory.dto.StockSummary;
 import inventory.exception.StartupDataException;
 import inventory.exception.SaveFailureException;
+
 import java.io.PrintWriter;
 import java.util.Map;
 
@@ -88,28 +89,28 @@ public class ConsoleView {
     /**
      * 오류 코드에 맞는 안내 출력
      *
-     * @param code 입력 형식·값 범위·업무 조건의 위반을 나타내는 오류 코드
+     * @param code    입력 형식·값 범위·업무 조건의 위반을 나타내는 오류 코드
      * @param details 오류 문구에 넣을 수치. 접미번호 부족은 issuable, 용량 부족은
      *                required/remaining, 재고 부족은 current를 사용하며 나머지는 빈 Map
      */
     public void error(ErrorCode code, Map<String, String> details) {
         String message = switch (code) {
             case DATE_SYNTAX -> "날짜는 YYYY-MM-DD 형식이어야 합니다.";
-case DATE_CALENDAR -> "존재하지 않는 날짜입니다.";
-case DATE_RANGE -> "날짜는 2000-01-01~2037-12-31 범위여야 합니다.";
-case SHELF_SYNTAX -> "유통기한 일수는 숫자 1~10자리여야 합니다.";
-case SHELF_RANGE -> "유통기한 일수는 0 또는 1~3650이어야 합니다.";
-case PHYSICAL_SYNTAX -> "물리코드는 P00001-001 형식이어야 합니다.";
-case PHYSICAL_RANGE -> "논리번호는 00001~99999, 접미번호는 001~999여야 합니다.";
-case PHYSICAL_NOT_FOUND -> "존재하지 않는 물리코드입니다.";
-case WRONG_PRODUCT -> "선택한 상품과 물리코드가 일치하지 않습니다.";
-case NOT_IN_STOCK -> "판매 가능 재고가 아닙니다.";
-case NOT_SOLD -> "판매 상태인 상품만 환불할 수 있습니다.";
-case REFUND_PERIOD -> "환불 기한 14일이 지났습니다.";
-case EXPIRED -> "유통기한이 지났습니다.";
-case ALREADY_REFUNDED -> "이미 환불한 상품입니다.";
-case FUTURE_PRODUCTION -> "생산일이 가상날짜보다 이후입니다.";
-case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
+            case DATE_CALENDAR -> "존재하지 않는 날짜입니다.";
+            case DATE_RANGE -> "날짜는 2000-01-01~2037-12-31 범위여야 합니다.";
+            case SHELF_SYNTAX -> "유통기한 일수는 숫자 1~10자리여야 합니다.";
+            case SHELF_RANGE -> "유통기한 일수는 0 또는 1~3650이어야 합니다.";
+            case PHYSICAL_SYNTAX -> "물리코드는 P00001-001 형식이어야 합니다.";
+            case PHYSICAL_RANGE -> "논리번호는 00001~99999, 접미번호는 001~999여야 합니다.";
+            case PHYSICAL_NOT_FOUND -> "존재하지 않는 물리코드입니다.";
+            case WRONG_PRODUCT -> "선택한 상품과 물리코드가 일치하지 않습니다.";
+            case NOT_IN_STOCK -> "판매 가능 재고가 아닙니다.";
+            case NOT_SOLD -> "판매 상태인 상품만 환불할 수 있습니다.";
+            case REFUND_PERIOD -> "환불 기한 14일이 지났습니다.";
+            case EXPIRED -> "유통기한이 지났습니다.";
+            case ALREADY_REFUNDED -> "이미 환불한 상품입니다.";
+            case FUTURE_PRODUCTION -> "생산일이 가상날짜보다 이후입니다.";
+            case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
             case MENU_SYNTAX -> "메뉴는 1~7 중 하나를 입력해야 합니다.";
             case NAME_SYNTAX -> "상품명은 완성형 한글, 영문, 숫자, 공백으로 구성된 1~30자여야 합니다.";
             case SIZE_SYNTAX -> "상품 크기는 숫자 1~10자리로 입력해야 합니다.";
@@ -125,8 +126,8 @@ case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
             case INBOUND_SYNTAX -> "입고 수량은 숫자 1~10자리로 입력해야 합니다.";
             case INBOUND_RANGE -> "입고 수량은 1~100개여야 합니다.";
             case SUFFIX_SHORTAGE -> "물리적 상품코드가 부족합니다. (발급 가능 수: " + details.get("issuable") + "개)";
-            case CAPACITY_SHORTAGE -> "창고의 남은 용량이 부족합니다. (필요 용량: "
-                    + details.get("required") + ", 남은 용량: " + details.get("remaining") + ")";
+            case CAPACITY_SHORTAGE ->
+                    "창고의 남은 용량이 부족합니다. (필요 용량: " + details.get("required") + ", 남은 용량: " + details.get("remaining") + ")";
             case SALE_SYNTAX -> "판매 수량은 숫자 1~10자리로 입력해야 합니다.";
             case SALE_RANGE -> "판매 수량은 1~100개여야 합니다.";
             case STOCK_SHORTAGE -> "재고가 부족합니다. (현재 재고: " + details.get("current") + "개)";
@@ -167,8 +168,7 @@ case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
      */
     public void registered(LogicalItem item) {
         line("신규 상품이 등록되었습니다.");
-        line("논리코드: " + item.code() + ", 상품명: " + item.name()
-                + ", 유통기한: " + shelfLife(item) + ", 크기: " + item.size() + ", 가격: " + item.price() + "원, 현재 재고: 0개");
+        line("논리코드: " + item.code() + ", 상품명: " + item.name() + ", 유통기한: " + shelfLife(item) + ", 크기: " + item.size() + ", 가격: " + item.price() + "원, 현재 재고: 0개");
     }
 
     /**
@@ -177,8 +177,7 @@ case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
      * @param result 저장에 성공한 입고 수량과 입고 후 현재 재고
      */
     public void received(StockChangeResult result) {
-        line("입고가 완료되었습니다. (입고 수량: " + result.quantity()
-                + "개, 현재 재고: " + result.currentAfter() + "개)");
+        line("입고가 완료되었습니다. (입고 수량: " + result.quantity() + "개, 현재 재고: " + result.currentAfter() + "개)");
     }
 
     /**
@@ -187,9 +186,9 @@ case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
      * @param result 저장에 성공한 판매 수량과 판매 후 현재 재고
      */
     public void sold(inventory.dto.SaleResult result) {
-        line("판매가 완료되었습니다. (판매 수량: " + result.lines().size()
-                + "개, 합계: " + result.totalAmount() + "원, 현재 재고: " + result.currentAfter() + "개)");
-        for(var row:result.lines()) line(row.key()+": "+row.salePrice()+"원"+(row.discounted()?" (환불 할인, 정가: "+row.regularPrice()+"원)":""));
+        line("판매가 완료되었습니다. (판매 수량: " + result.lines().size() + "개, 합계: " + result.totalAmount() + "원, 현재 재고: " + result.currentAfter() + "개)");
+        for (var row : result.lines())
+            line(row.key() + ": " + row.salePrice() + "원" + (row.discounted() ? " (환불 할인, 정가: " + row.regularPrice() + "원)" : ""));
     }
 
     /**
@@ -218,10 +217,7 @@ case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
             line("입고된 물리적 상품이 없습니다.");
         }
         for (var item : result.physicalItems()) {
-            line("물리코드: "+item.physicalCode()+", 상태: "+item.state().value()+", 생산일: "+item.producedOn()
-                +", 만료일: "+DomainRules.expiry(result.summary().item(),item).map(Object::toString).orElse("-")
-                +", 판매일: "+item.soldOn().map(Object::toString).orElse("-")+", 환불이력: "+(item.refunded()?1:0)
-                +", 판매가: "+DomainRules.salePrice(result.summary().item(),item)+"원");
+            line("물리코드: " + item.physicalCode() + ", 상태: " + item.state().value() + ", 생산일: " + item.producedOn() + ", 만료일: " + DomainRules.expiry(result.summary().item(), item).map(Object::toString).orElse("-") + ", 판매일: " + item.soldOn().map(Object::toString).orElse("-") + ", 환불이력: " + (item.refunded() ? 1 : 0) + ", 판매가: " + DomainRules.salePrice(result.summary().item(), item) + "원");
         }
     }
 
@@ -233,13 +229,8 @@ case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
      */
     private String formatSummary(StockSummary summary) {
         var item = summary.item();
-        String next = summary.nextSuffix().isPresent()
-                ? DomainRules.formatSuffix(summary.nextSuffix().getAsInt()) : "없음";
-        return "논리코드: " + item.code() + ", 상품명: " + item.name()
-                + ", 유통기한: " + shelfLife(item) + ", 크기: " + item.size() + ", 가격: " + item.price() + "원"
-                + ", 누적 입고: " + summary.received() + "개, 누적 판매: " + summary.sold()
-                + "개, 폐기: " + summary.discarded() + "개, 현재 재고: " + summary.current() + "개, 발급 가능 수: " + summary.issuable()
-                + "개, 다음 접미번호: " + next;
+        String next = summary.nextSuffix().isPresent() ? DomainRules.formatSuffix(summary.nextSuffix().getAsInt()) : "없음";
+        return "논리코드: " + item.code() + ", 상품명: " + item.name() + ", 유통기한: " + shelfLife(item) + ", 크기: " + item.size() + ", 가격: " + item.price() + "원" + ", 누적 입고: " + summary.received() + "개, 누적 판매: " + summary.sold() + "개, 폐기: " + summary.discarded() + "개, 현재 재고: " + summary.current() + "개, 발급 가능 수: " + summary.issuable() + "개, 다음 접미번호: " + next;
     }
 
 
@@ -293,17 +284,23 @@ case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
      *
      * @param text 개행을 붙여 출력할 안내 또는 결과 문자열
      */
-    private String shelfLife(LogicalItem item) { return item.shelfLifeDays()==0 ? "없음" : item.shelfLifeDays()+"일"; }
+    private String shelfLife(LogicalItem item) {
+        return item.shelfLifeDays() == 0 ? "없음" : item.shelfLifeDays() + "일";
+    }
+
     public void candidate(LogicalItem item, inventory.entity.PhysicalItem row) {
-        line(row.physicalCode()+", 생산일: "+row.producedOn()+", 만료일: "+DomainRules.expiry(item,row).orElseThrow()+", 판매가: "+DomainRules.salePrice(item,row)+"원");
+        line(row.physicalCode() + ", 생산일: " + row.producedOn() + ", 만료일: " + DomainRules.expiry(item, row).orElseThrow() + ", 판매가: " + DomainRules.salePrice(item, row) + "원");
     }
+
     public void refunded(inventory.dto.RefundResult result) {
-        line("환불이 완료되었습니다. 물리코드: "+result.key()+", 환불 금액: "+result.refundAmount()+"원, 현재 재고: "+result.currentAfter()+"개, 재판매가: "+result.resalePrice()+"원");
+        line("환불이 완료되었습니다. 물리코드: " + result.key() + ", 환불 금액: " + result.refundAmount() + "원, 현재 재고: " + result.currentAfter() + "개, 재판매가: " + result.resalePrice() + "원");
     }
+
     public void dateChanged(inventory.dto.DateChangeResult result) {
-        line("가상날짜 변경 완료: "+result.newDate()+", 폐기: "+result.discarded().size()+"개");
-        result.discarded().forEach(row->line(row.key()+", 만료일: "+row.expiryDate()));
+        line("가상날짜 변경 완료: " + result.newDate() + ", 폐기: " + result.discarded().size() + "개");
+        result.discarded().forEach(row -> line(row.key() + ", 만료일: " + row.expiryDate()));
     }
+
     public void line(String text) {
         out.println(text);
         out.flush();

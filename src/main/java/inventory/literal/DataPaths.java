@@ -11,6 +11,7 @@ public final class DataPaths {
     public static final String PHYSICAL_FILE = "physical_item.txt";
 
     public static final String DATE_FILE = "virtual_date.txt";
+
     private DataPaths() {
     }
 }

@@ -3,6 +3,7 @@ package inventory.util;
 import java.util.function.Function;
 import java.util.Map;
 import java.util.Optional;
+
 import inventory.dto.ItemDetail;
 import inventory.dto.StockSummary;
 import inventory.literal.ErrorCode;
@@ -16,6 +17,7 @@ import inventory.validation.InputValidator;
 import inventory.service.ProductService;
 import inventory.service.StockService;
 import inventory.service.QueryService;
+
 import java.io.IOException;
 
 
@@ -32,15 +34,15 @@ public class Console {
     /**
      * 입력/검증/서비스/출력 객체 보관
      *
-     * @param input 사용자 입력을 한 줄씩 읽는 입력 채널
-     * @param validator 입력 문자열의 형식과 값 범위를 검사하는 검증기
+     * @param input          사용자 입력을 한 줄씩 읽는 입력 채널
+     * @param validator      입력 문자열의 형식과 값 범위를 검사하는 검증기
      * @param productService 신규 상품 등록과 등록 가능 여부를 처리하는 서비스
-     * @param stockService 재고 입고와 상품 판매를 처리하는 서비스
-     * @param queryService 전체 재고와 단일 상품을 조회하는 서비스
-     * @param view 프롬프트, 오류 안내, 처리 결과를 출력하는 객체
+     * @param stockService   재고 입고와 상품 판매를 처리하는 서비스
+     * @param queryService   전체 재고와 단일 상품을 조회하는 서비스
+     * @param view           프롬프트, 오류 안내, 처리 결과를 출력하는 객체
      */
     public Console(Input input, InputValidator validator, ProductService productService, StockService stockService, QueryService queryService, inventory.service.DateService dateService, ConsoleView view) {
-        this.dateService=dateService;
+        this.dateService = dateService;
         this.input = input;
         this.validator = validator;
         this.productService = productService;
@@ -53,16 +55,19 @@ public class Console {
      * 주 메뉴 반복. 실제 프로세스 종료는 Main에서 처리
      *
      * @return 정상 종료 또는 EOF이면 0, 파일 저장 실패이면 1인 종료 코드
-     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws IOException           사용자 입력을 읽는 중 입출력 오류가 발생한 경우
      * @throws IllegalStateException 검증된 주 메뉴 번호가 1~7가 아닌 경우
      * @throws BusinessRuleException 입력 단계에서 재입력으로 처리할 수 없는 업무 오류가 전파된 경우
      */
     public int run() throws IOException {
         try {
-            while(dateService.currentDate().isEmpty()) {
+            while (dateService.currentDate().isEmpty()) {
                 view.prompt(Field.DATE);
-                try { dateService.initialize(validator.parseDate(input.readLine())); }
-                catch(UserInputException e) { view.error(e.code(),Map.of()); }
+                try {
+                    dateService.initialize(validator.parseDate(input.readLine()));
+                } catch (UserInputException e) {
+                    view.error(e.code(), Map.of());
+                }
             }
             while (true) {
                 view.mainMenu();
@@ -100,8 +105,8 @@ public class Console {
      * 상품명 → 크기 → 가격 순서로 입력받아 등록
      * 재입력은 현재 항목만 반복하고, n이면 취소
      *
-     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
-     * @throws EndOfInputException 입력 또는 재입력 확인 중 EOF를 만난 경우
+     * @throws IOException          사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws EndOfInputException  입력 또는 재입력 확인 중 EOF를 만난 경우
      * @throws SaveFailureException 등록한 상품을 논리 파일에 저장하지 못한 경우
      */
     private void registerMenu() throws IOException {
@@ -121,17 +126,17 @@ public class Console {
         if (price.isEmpty()) {
             return;
         }
-        var shelf=readValue(Field.SHELF_LIFE,validator::parseShelfLife);
-        if(shelf.isEmpty()) return;
-        view.registered(productService.register(name.get(), size.get(), price.get(),shelf.get()));
+        var shelf = readValue(Field.SHELF_LIFE, validator::parseShelfLife);
+        if (shelf.isEmpty()) return;
+        view.registered(productService.register(name.get(), size.get(), price.get(), shelf.get()));
     }
 
     /**
      * 상품 선택 후 수량 입력. 접미번호가 소진된 상품은 수량 입력 없이 복귀
      * 수량을 다시 입력할 때 선택한 상품은 유지
      *
-     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
-     * @throws EndOfInputException 상품코드·수량 입력 또는 재입력 확인 중 EOF를 만난 경우
+     * @throws IOException          사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws EndOfInputException  상품코드·수량 입력 또는 재입력 확인 중 EOF를 만난 경우
      * @throws SaveFailureException 입고 결과를 물리 파일에 저장하지 못한 경우
      */
     private void receiveMenu() throws IOException {
@@ -145,15 +150,18 @@ public class Console {
         }
         StockSummary summary = selected.get();
         view.selected(summary);
-        var quantity=readValue(Field.INBOUND_QUANTITY,raw -> {
-            int n=validator.parseQuantity(raw,Field.INBOUND_QUANTITY);
-            stockService.validateReceiptQuantity(summary,n); return n;
+        var quantity = readValue(Field.INBOUND_QUANTITY, raw -> {
+            int n = validator.parseQuantity(raw, Field.INBOUND_QUANTITY);
+            stockService.validateReceiptQuantity(summary, n);
+            return n;
         });
-        if(quantity.isEmpty()) return;
-        readValue(Field.PRODUCED_ON,raw -> {
-            var produced=validator.parseDate(raw);
-            var result=stockService.receive(summary,quantity.get(),produced);
-            view.received(result); view.line("생산일자: "+produced); return result;
+        if (quantity.isEmpty()) return;
+        readValue(Field.PRODUCED_ON, raw -> {
+            var produced = validator.parseDate(raw);
+            var result = stockService.receive(summary, quantity.get(), produced);
+            view.received(result);
+            view.line("생산일자: " + produced);
+            return result;
         });
     }
 
@@ -161,8 +169,8 @@ public class Console {
      * 상품 선택 후 수량 입력. 재고 0개여도 수량은 입력받음
      * 수량을 다시 입력할 때 선택한 상품은 유지
      *
-     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
-     * @throws EndOfInputException 상품코드·수량 입력 또는 재입력 확인 중 EOF를 만난 경우
+     * @throws IOException          사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws EndOfInputException  상품코드·수량 입력 또는 재입력 확인 중 EOF를 만난 경우
      * @throws SaveFailureException 판매 결과를 물리 파일에 저장하지 못한 경우
      */
     private void saleMenu() throws IOException {
@@ -176,14 +184,17 @@ public class Console {
         }
         StockSummary summary = selected.get();
         view.selected(summary);
-        if(summary.item().shelfLifeDays()>0) {
-            var mode=readValue(Field.SALE_MODE,validator::parseQueryMode);
-            if(mode.isEmpty()) return;
-            if(mode.get()==2) {
-                var candidates=stockService.saleCandidates(summary.item().code());
-                if(candidates.isEmpty()) { view.line("판매 가능 재고가 없습니다."); return; }
-                candidates.forEach(row->view.candidate(summary.item(),row));
-                readValue(Field.PHYSICAL_KEY,raw->stockService.sellOne(summary,validator.parsePhysicalKey(raw))).ifPresent(view::sold);
+        if (summary.item().shelfLifeDays() > 0) {
+            var mode = readValue(Field.SALE_MODE, validator::parseQueryMode);
+            if (mode.isEmpty()) return;
+            if (mode.get() == 2) {
+                var candidates = stockService.saleCandidates(summary.item().code());
+                if (candidates.isEmpty()) {
+                    view.line("판매 가능 재고가 없습니다.");
+                    return;
+                }
+                candidates.forEach(row -> view.candidate(summary.item(), row));
+                readValue(Field.PHYSICAL_KEY, raw -> stockService.sellOne(summary, validator.parsePhysicalKey(raw))).ifPresent(view::sold);
                 return;
             }
         }
@@ -194,17 +205,22 @@ public class Console {
     /**
      * 상품이 없어도 조회 방식부터 선택. 결과 출력 후 주 메뉴로 복귀
      *
-     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws IOException         사용자 입력을 읽는 중 입출력 오류가 발생한 경우
      * @throws EndOfInputException 조회 방식·상품코드 입력 또는 재입력 확인 중 EOF를 만난 경우
      */
     private void refundMenu() throws IOException {
-        if(!productService.hasProducts()) { view.line("등록된 상품이 없어 환불할 수 없습니다."); return; }
-        readValue(Field.PHYSICAL_KEY,raw->stockService.refund(validator.parsePhysicalKey(raw))).ifPresent(view::refunded);
+        if (!productService.hasProducts()) {
+            view.line("등록된 상품이 없어 환불할 수 없습니다.");
+            return;
+        }
+        readValue(Field.PHYSICAL_KEY, raw -> stockService.refund(validator.parsePhysicalKey(raw))).ifPresent(view::refunded);
     }
+
     private void dateMenu() throws IOException {
-        view.line("현재 가상날짜: "+dateService.currentDate().orElseThrow());
-        readValue(Field.DATE,raw->dateService.advance(validator.parseDate(raw))).ifPresent(view::dateChanged);
+        view.line("현재 가상날짜: " + dateService.currentDate().orElseThrow());
+        readValue(Field.DATE, raw -> dateService.advance(validator.parseDate(raw))).ifPresent(view::dateChanged);
     }
+
     private void queryMenu() throws IOException {
         Optional<Integer> mode = readValue(Field.QUERY_MODE, validator::parseQueryMode);
         if (mode.isEmpty()) {
@@ -222,7 +238,7 @@ public class Console {
      * y면 재입력, n이면 취소. 다른 입력이면 y/n부터 다시 받음
      *
      * @return 재입력을 선택한 y이면 true, 작업 취소를 선택한 n이면 false
-     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws IOException         사용자 입력을 읽는 중 입출력 오류가 발생한 경우
      * @throws EndOfInputException 재입력 확인 중 EOF를 만난 경우
      */
     private boolean askRetry() throws IOException {
@@ -239,14 +255,14 @@ public class Console {
     /**
      * 입력 오류나 해당 단계의 업무 오류면 재입력 확인. 예상하지 않은 업무 오류는 다시 던짐
      *
-     * @param <T> 입력을 검증·변환하거나 업무를 처리해 얻는 결과의 자료형
+     * @param <T>   입력을 검증·변환하거나 업무를 처리해 얻는 결과의 자료형
      * @param field 표시할 프롬프트와 재입력 가능한 업무 오류를 구분하는 입력 항목
      * @param parse 원문 입력을 검증·변환하는 함수. 수량 입력에서는 입고·판매 처리도 수행
      * @return 처리에 성공한 값을 담은 Optional, 사용자가 취소하면 Optional.empty()
-     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
-     * @throws EndOfInputException 입력 또는 재입력 확인 중 EOF를 만난 경우
+     * @throws IOException           사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws EndOfInputException   입력 또는 재입력 확인 중 EOF를 만난 경우
      * @throws BusinessRuleException 현재 입력 항목에서 재입력으로 처리할 수 없는 업무 오류가 발생한 경우
-     * @throws SaveFailureException parse가 수행하는 입고·판매 처리 중 파일 저장에 실패한 경우
+     * @throws SaveFailureException  parse가 수행하는 입고·판매 처리 중 파일 저장에 실패한 경우
      */
     private <T> Optional<T> readValue(Field field, Function<String, T> parse) throws IOException {
         while (true) {
@@ -274,12 +290,12 @@ public class Console {
     /**
      * 코드 형식/범위/등록 여부 확인 후 상품 선택. 미등록 코드는 재입력 확인
      *
-     * @param <T> 논리코드로 상품을 선택하거나 조회해 얻는 결과의 자료형
+     * @param <T>     논리코드로 상품을 선택하거나 조회해 얻는 결과의 자료형
      * @param purpose 코드 입력 목적. 입고·판매·조회 프롬프트와 입고 접미번호 소진 시 흐름을 결정
-     * @param select 검증된 논리코드로 등록 여부를 확인하고 상품을 선택·조회하는 함수
+     * @param select  검증된 논리코드로 등록 여부를 확인하고 상품을 선택·조회하는 함수
      * @return 선택한 결과를 담은 Optional, 취소하거나 입고 접미번호가 소진되면 Optional.empty()
-     * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
-     * @throws EndOfInputException 상품코드 입력 또는 재입력 확인 중 EOF를 만난 경우
+     * @throws IOException           사용자 입력을 읽는 중 입출력 오류가 발생한 경우
+     * @throws EndOfInputException   상품코드 입력 또는 재입력 확인 중 EOF를 만난 경우
      * @throws BusinessRuleException CODE_NOT_FOUND 이외의 업무 오류가 발생한 경우.
      *                               입고 목적의 LIMIT_PHYSICAL_CODE는 빈 결과로 처리
      */

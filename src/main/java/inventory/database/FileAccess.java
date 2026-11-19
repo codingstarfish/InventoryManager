@@ -1,15 +1,19 @@
 package inventory.database;
 
 import inventory.literal.DataPaths;
+
 import java.util.List;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
 import inventory.exception.StartupDataException;
 
 // 작업 디렉터리 아래 data 폴더의 파일 생성, 접근 확인, 경로 계산
 public class FileAccess {
-    /** 실제 작업 디렉터리 */
+    /**
+     * 실제 작업 디렉터리
+     */
     private final Path workingDir;
 
     /**
@@ -37,7 +41,7 @@ public class FileAccess {
             try {
                 try (var entries = Files.list(data)) {
                     var wrongCase = entries.filter(entry -> entry.getFileName().toString()
-                            .equalsIgnoreCase(path.getFileName().toString()))
+                                    .equalsIgnoreCase(path.getFileName().toString()))
                             .filter(entry -> !entry.getFileName().equals(path.getFileName())).findFirst();
                     if (wrongCase.isPresent()) {
                         throw new StartupDataException(List.of(wrongCase.get().getFileName().toString()),
@@ -59,7 +63,7 @@ public class FileAccess {
      * 접근할 수 없으면 StartupDataException
      *
      * @throws StartupDataException 데이터 파일 경로가 일반 파일이 아니거나, 읽기·쓰기가 불가능하거나,
-     *         보안 제한으로 파일 상태나 접근 권한을 확인할 수 없는 경우
+     *                              보안 제한으로 파일 상태나 접근 권한을 확인할 수 없는 경우
      */
     public void checkReadableWritable() {
         for (Path path : List.of(logicalPath(), physicalPath(), datePath())) {
@@ -96,7 +100,10 @@ public class FileAccess {
      *
      * @return 낱개 데이터 파일의 절대 경로
      */
-    public Path datePath() { return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.DATE_FILE); }
+    public Path datePath() {
+        return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.DATE_FILE);
+    }
+
     public Path physicalPath() {
         return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.PHYSICAL_FILE);
     }

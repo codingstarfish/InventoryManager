@@ -2,7 +2,9 @@ package inventory.database;
 
 import inventory.literal.InputPatterns;
 import inventory.literal.DataPaths;
+
 import java.util.List;
+
 import inventory.exception.StartupDataException;
 
 // 파일 한 줄의 형식만 검사. 값과 파일 간 관계는 FileIntegrityValidator에서 확인
@@ -75,18 +77,19 @@ public class EntityParser {
     /**
      * 공백 제거 없이 필드 전체를 검사. 정규식과 안 맞으면 파일 오류
      *
-     * @param value 검사할 필드의 원문 값
+     * @param value   검사할 필드의 원문 값
      * @param pattern 필드 전체가 일치해야 하는 정규식
-     * @param file 오류가 발생한 데이터 파일명
-     * @param reason 정규식 불일치 시 전달할 오류 설명
+     * @param file    오류가 발생한 데이터 파일명
+     * @param reason  정규식 불일치 시 전달할 오류 설명
      * @throws StartupDataException 필드 전체가 지정한 정규식과 일치하지 않는 경우
      */
     public String parseDateSyntax(List<String> lines) {
-        if(lines.size()>1) throw syntaxError(DataPaths.DATE_FILE,"날짜 파일은 최대 한 행이어야 합니다.");
-        if(lines.isEmpty()) return null;
-        checkPattern(lines.get(0),"[0-9]{4}-[0-9]{2}-[0-9]{2}",DataPaths.DATE_FILE,"가상날짜는 YYYY-MM-DD 형식이어야 합니다.");
+        if (lines.size() > 1) throw syntaxError(DataPaths.DATE_FILE, "날짜 파일은 최대 한 행이어야 합니다.");
+        if (lines.isEmpty()) return null;
+        checkPattern(lines.get(0), "[0-9]{4}-[0-9]{2}-[0-9]{2}", DataPaths.DATE_FILE, "가상날짜는 YYYY-MM-DD 형식이어야 합니다.");
         return lines.get(0);
     }
+
     private void checkPattern(String value, String pattern, String file, String reason) {
         if (!value.matches(pattern)) {
             throw syntaxError(file, reason);
@@ -94,7 +97,7 @@ public class EntityParser {
     }
 
     /**
-     * @param file 문법 오류가 발생한 데이터 파일명
+     * @param file   문법 오류가 발생한 데이터 파일명
      * @param reason 문법 오류의 원인 설명
      * @return 해당 파일명과 원인을 담은 시작 데이터 예외
      */

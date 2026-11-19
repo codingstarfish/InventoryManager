@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.HashMap;
 import java.util.TreeMap;
 import java.util.Map;
+
 import inventory.literal.DataPaths;
 import inventory.literal.Limits;
 import inventory.database.RawPhysicalRow;
@@ -25,20 +26,20 @@ public class FileIntegrityValidator {
      * 세 파일의 문법 검사가 끝난 뒤 값의 범위와 파일 간 관계 검사
      * 중복/누락/미등록 상품 참조/상태/날짜/용량 위반이면 StartupDataException
      *
-     * @param logicalRows 문법 검사를 통과한 논리 파일의 상품 행 목록
+     * @param logicalRows  문법 검사를 통과한 논리 파일의 상품 행 목록
      * @param physicalRows 문법 검사를 통과한 물리 파일의 낱개 상품 행 목록
      * @throws StartupDataException 상품 크기가 1000을 초과하거나 가격의 범위·10원 단위가 잘못된 경우,
-     *         논리코드가 P00000이거나 중복·누락된 경우, 접미번호가 000이거나 중복·누락된 경우,
-     *         물리 파일이 미등록 상품을 참조하거나 상태·날짜 일관성을 어긴 경우,
-     *         미판매 재고의 총용량이 1000000을 초과한 경우
+     *                              논리코드가 P00000이거나 중복·누락된 경우, 접미번호가 000이거나 중복·누락된 경우,
+     *                              물리 파일이 미등록 상품을 참조하거나 상태·날짜 일관성을 어긴 경우,
+     *                              미판매 재고의 총용량이 1000000을 초과한 경우
      */
     public void validate(List<RawLogicalRow> logicalRows, List<RawPhysicalRow> physicalRows, String dateText) {
-        var date = dateText==null ? null : parseStoredDate(dateText, DataPaths.DATE_FILE);
+        var date = dateText == null ? null : parseStoredDate(dateText, DataPaths.DATE_FILE);
         Map<String, RawLogicalRow> logical = new TreeMap<>();
         for (RawLogicalRow row : logicalRows) {
             String file = DataPaths.LOGICAL_FILE;
             validateCode(row.code(), file);
-            if(row.shelfLifeDays()>Limits.MAX_SHELF_LIFE) throw dataError(file,"유통기한 일수는 0 또는 1~3650이어야 합니다.");
+            if (row.shelfLifeDays() > Limits.MAX_SHELF_LIFE) throw dataError(file, "유통기한 일수는 0 또는 1~3650이어야 합니다.");
             if (row.size() > Limits.MAX_SIZE) {
                 throw dataError(file, "상품 크기는 1~1000 용량 단위여야 합니다.");
             }
@@ -88,20 +89,26 @@ public class FileIntegrityValidator {
                     throw dataError(DataPaths.PHYSICAL_FILE,
                             "같은 논리코드의 접미번호는 001부터 중간 번호의 누락 없이 연속해야 합니다.");
                 }
-                var item=logical.get(entry.getKey());
-                var produced=parseStoredDate(row.producedOn(),DataPaths.PHYSICAL_FILE);
-                var sold=row.soldOn().equals("-") ? null : parseStoredDate(row.soldOn(),DataPaths.PHYSICAL_FILE);
-                if(date==null) throw new StartupDataException(List.of(DataPaths.DATE_FILE,DataPaths.PHYSICAL_FILE),"날짜 파일이 비어 있는데 물리 파일에 기록이 있습니다.");
-                if(produced.isAfter(date)) throw dataError(DataPaths.PHYSICAL_FILE,"생산일이 가상날짜보다 이후입니다.");
-                if((row.state()==inventory.entity.ItemState.SOLD)!=(sold!=null)) throw dataError(DataPaths.PHYSICAL_FILE,"상태와 판매일이 일치하지 않습니다.");
-                if(sold!=null && (sold.isBefore(produced)||sold.isAfter(date))) throw dataError(DataPaths.PHYSICAL_FILE,"판매일은 생산일과 같거나 이후이고, 가상날짜와 같거나 이전이어야 합니다.");
-                if(item.shelfLifeDays()==0 && row.state()==inventory.entity.ItemState.DISCARDED) throw dataError(DataPaths.PHYSICAL_FILE,"유통기한이 없는 상품은 폐기 상태일 수 없습니다.");
-                if(item.shelfLifeDays()>0) {
-                    var expiry=produced.plusDays(item.shelfLifeDays());
-                    if(sold!=null && sold.isAfter(expiry)) throw dataError(DataPaths.PHYSICAL_FILE,"판매일은 만료일과 같거나 이전이어야 합니다.");
-                    if(row.state()==inventory.entity.ItemState.IN_STOCK && expiry.isBefore(date)) throw dataError(DataPaths.PHYSICAL_FILE,"유통기한이 지났으나 폐기되지 않은 재고가 있습니다.");
+                var item = logical.get(entry.getKey());
+                var produced = parseStoredDate(row.producedOn(), DataPaths.PHYSICAL_FILE);
+                var sold = row.soldOn().equals("-") ? null : parseStoredDate(row.soldOn(), DataPaths.PHYSICAL_FILE);
+                if (date == null)
+                    throw new StartupDataException(List.of(DataPaths.DATE_FILE, DataPaths.PHYSICAL_FILE), "날짜 파일이 비어 있는데 물리 파일에 기록이 있습니다.");
+                if (produced.isAfter(date)) throw dataError(DataPaths.PHYSICAL_FILE, "생산일이 가상날짜보다 이후입니다.");
+                if ((row.state() == inventory.entity.ItemState.SOLD) != (sold != null))
+                    throw dataError(DataPaths.PHYSICAL_FILE, "상태와 판매일이 일치하지 않습니다.");
+                if (sold != null && (sold.isBefore(produced) || sold.isAfter(date)))
+                    throw dataError(DataPaths.PHYSICAL_FILE, "판매일은 생산일과 같거나 이후이고, 가상날짜와 같거나 이전이어야 합니다.");
+                if (item.shelfLifeDays() == 0 && row.state() == inventory.entity.ItemState.DISCARDED)
+                    throw dataError(DataPaths.PHYSICAL_FILE, "유통기한이 없는 상품은 폐기 상태일 수 없습니다.");
+                if (item.shelfLifeDays() > 0) {
+                    var expiry = produced.plusDays(item.shelfLifeDays());
+                    if (sold != null && sold.isAfter(expiry))
+                        throw dataError(DataPaths.PHYSICAL_FILE, "판매일은 만료일과 같거나 이전이어야 합니다.");
+                    if (row.state() == inventory.entity.ItemState.IN_STOCK && expiry.isBefore(date))
+                        throw dataError(DataPaths.PHYSICAL_FILE, "유통기한이 지났으나 폐기되지 않은 재고가 있습니다.");
                 }
-                if(row.state()==inventory.entity.ItemState.IN_STOCK) used+=(long)item.size();
+                if (row.state() == inventory.entity.ItemState.IN_STOCK) used += (long) item.size();
             }
         }
         if (used > Limits.MAX_CAPACITY) {
@@ -119,11 +126,15 @@ public class FileIntegrityValidator {
      */
     public java.time.LocalDate parseStoredDate(String value, String file) {
         try {
-            var day=java.time.LocalDate.parse(value);
-            if(day.isBefore(Limits.MIN_DATE)||day.isAfter(Limits.MAX_DATE)) throw new java.time.DateTimeException("range");
+            var day = java.time.LocalDate.parse(value);
+            if (day.isBefore(Limits.MIN_DATE) || day.isAfter(Limits.MAX_DATE))
+                throw new java.time.DateTimeException("range");
             return day;
-        } catch(java.time.DateTimeException e) { throw dataError(file,"2000-01-01~2037-12-31 범위의 실제 날짜여야 합니다."); }
+        } catch (java.time.DateTimeException e) {
+            throw dataError(file, "2000-01-01~2037-12-31 범위의 실제 날짜여야 합니다.");
+        }
     }
+
     private void validateCode(String code, String file) {
         if (code.equals("P00000")) {
             throw dataError(file, "논리코드의 번호는 00001~99999여야 합니다.");
@@ -131,7 +142,7 @@ public class FileIntegrityValidator {
     }
 
     /**
-     * @param file 오류가 발생한 데이터 파일명
+     * @param file   오류가 발생한 데이터 파일명
      * @param reason 데이터 검증에 실패한 이유
      * @return 파일명과 실패 이유를 담은 시작 데이터 오류
      */

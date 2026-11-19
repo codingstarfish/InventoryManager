@@ -25,8 +25,9 @@ public final class Limits {
     public static final int MAX_SHELF_LIFE = 3650;
     public static final int REFUND_DAYS = 14;
     public static final int RESALE_PERCENT = 70;
-    public static final java.time.LocalDate MIN_DATE = java.time.LocalDate.of(2000,1,1);
-    public static final java.time.LocalDate MAX_DATE = java.time.LocalDate.of(2037,12,31);
+    public static final java.time.LocalDate MIN_DATE = java.time.LocalDate.of(2000, 1, 1);
+    public static final java.time.LocalDate MAX_DATE = java.time.LocalDate.of(2037, 12, 31);
+
     private Limits() {
     }
 }

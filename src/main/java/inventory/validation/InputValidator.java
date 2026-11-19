@@ -74,7 +74,7 @@ public class InputValidator {
      * @param raw 사용자가 입력한 상품명 원문
      * @return 양 끝의 일반 공백을 제거하고 형식을 검증한 상품명
      * @throws UserInputException 공백 정리 후 완성형 한글·영문·숫자·공백으로 구성된
-     *         1~30자 상품명이 아니면 {@code NAME_SYNTAX}
+     *                            1~30자 상품명이 아니면 {@code NAME_SYNTAX}
      */
     public String parseName(String raw) {
         return requirePattern(raw, InputPatterns.NAME, ErrorCode.NAME_SYNTAX);
@@ -86,7 +86,7 @@ public class InputValidator {
      * @param raw 사용자가 입력한 논리코드 원문
      * @return 양 끝의 일반 공백을 제거한 P00001~P99999 형식의 논리코드
      * @throws UserInputException 공백 정리 후 대문자 P와 숫자 다섯 자리 형식이 아니면
-     *         {@code CODE_SYNTAX}, 번호가 00000이면 {@code CODE_RANGE}
+     *                            {@code CODE_SYNTAX}, 번호가 00000이면 {@code CODE_RANGE}
      */
     public String parseLogicalCode(String raw) {
         String value = requirePattern(raw, InputPatterns.LOGICAL_CODE, ErrorCode.CODE_SYNTAX);
@@ -101,11 +101,11 @@ public class InputValidator {
      * 숫자 1~10자리와 선행 0 허용. 부호나 소수점은 불가
      * 최대 9999999999까지 읽어야 하므로 long 사용. 범위는 각 항목에서 검사
      *
-     * @param raw 사용자가 입력한 정수 원문
+     * @param raw   사용자가 입력한 정수 원문
      * @param field 형식 오류 코드를 선택할 항목(SIZE, PRICE, INBOUND_QUANTITY, SALE_QUANTITY)
      * @return 숫자 형식을 검증한 0~9999999999의 정수. 항목별 범위 검사는 별도 수행
-     * @throws UserInputException 공백 정리 후 숫자 1~10자리가 아니면 항목에 따라
-     *         {@code SIZE_SYNTAX}, {@code PRICE_SYNTAX}, {@code INBOUND_SYNTAX} 또는 {@code SALE_SYNTAX}
+     * @throws UserInputException       공백 정리 후 숫자 1~10자리가 아니면 항목에 따라
+     *                                  {@code SIZE_SYNTAX}, {@code PRICE_SYNTAX}, {@code INBOUND_SYNTAX} 또는 {@code SALE_SYNTAX}
      * @throws IllegalArgumentException 항목이 SIZE, PRICE, INBOUND_QUANTITY, SALE_QUANTITY 중 하나가 아닌 경우
      */
     public long parseUnsignedDecimal(String raw, Field field) {
@@ -126,7 +126,7 @@ public class InputValidator {
      * @param raw 사용자가 입력한 상품 한 개의 크기 원문
      * @return 검증된 상품 크기(1~1000 용량 단위)
      * @throws UserInputException 공백 정리 후 숫자 1~10자리가 아니면 {@code SIZE_SYNTAX},
-     *         값이 1~1000 범위를 벗어나면 {@code SIZE_RANGE}
+     *                            값이 1~1000 범위를 벗어나면 {@code SIZE_RANGE}
      */
     public int parseSize(String raw) {
         long value = parseUnsignedDecimal(raw, Field.SIZE);
@@ -142,7 +142,7 @@ public class InputValidator {
      * @param raw 사용자가 입력한 상품 가격 원문
      * @return 10원 단위로 검증된 상품 가격(10~10000000원)
      * @throws UserInputException 공백 정리 후 숫자 1~10자리가 아니면 {@code PRICE_SYNTAX},
-     *         값이 10~10000000 범위를 벗어나면 {@code PRICE_RANGE}, 10의 배수가 아니면 {@code PRICE_UNIT}
+     *                            값이 10~10000000 범위를 벗어나면 {@code PRICE_RANGE}, 10의 배수가 아니면 {@code PRICE_UNIT}
      */
     public int parsePrice(String raw) {
         long value = parseUnsignedDecimal(raw, Field.PRICE);
@@ -158,12 +158,12 @@ public class InputValidator {
     /**
      * 입고/판매 수량: 숫자 형식 검사 후 1~100 범위 확인
      *
-     * @param raw 사용자가 입력한 입고 또는 판매 수량 원문
+     * @param raw   사용자가 입력한 입고 또는 판매 수량 원문
      * @param field 오류 코드를 선택할 수량 항목(INBOUND_QUANTITY 또는 SALE_QUANTITY)
      * @return 검증된 입고 또는 판매 수량(1~100개)
-     * @throws UserInputException 공백 정리 후 숫자 1~10자리가 아니면 항목에 따라
-     *         {@code INBOUND_SYNTAX} 또는 {@code SALE_SYNTAX}, 값이 1~100 범위를 벗어나면
-     *         {@code INBOUND_RANGE} 또는 {@code SALE_RANGE}
+     * @throws UserInputException       공백 정리 후 숫자 1~10자리가 아니면 항목에 따라
+     *                                  {@code INBOUND_SYNTAX} 또는 {@code SALE_SYNTAX}, 값이 1~100 범위를 벗어나면
+     *                                  {@code INBOUND_RANGE} 또는 {@code SALE_RANGE}
      * @throws IllegalArgumentException 항목이 INBOUND_QUANTITY 또는 SALE_QUANTITY가 아닌 경우
      */
     public int parseQuantity(String raw, Field field) {
@@ -182,32 +182,40 @@ public class InputValidator {
     /**
      * 양 끝의 일반 공백을 제거한 뒤 문자열 전체가 정규식과 맞는지 확인
      *
-     * @param raw 형식을 검사할 사용자 입력 원문
+     * @param raw     형식을 검사할 사용자 입력 원문
      * @param pattern 입력 문자열 전체에 적용할 정규식
-     * @param code 형식이 맞지 않을 때 사용할 입력 오류 코드
+     * @param code    형식이 맞지 않을 때 사용할 입력 오류 코드
      * @return 양 끝의 일반 공백을 제거하고 정규식 검증을 통과한 문자열
      * @throws UserInputException 공백 정리 후 입력 문자열 전체가 정규식과 맞지 않는 경우. 전달받은 오류 코드 사용
      */
     public int parseShelfLife(String raw) {
         String value = requirePattern(raw, InputPatterns.INPUT_DECIMAL, ErrorCode.SHELF_SYNTAX);
-        long n=Long.parseLong(value);
-        if(n>Limits.MAX_SHELF_LIFE) throw new UserInputException(ErrorCode.SHELF_RANGE);
-        return (int)n;
+        long n = Long.parseLong(value);
+        if (n > Limits.MAX_SHELF_LIFE) throw new UserInputException(ErrorCode.SHELF_RANGE);
+        return (int) n;
     }
+
     public java.time.LocalDate parseDate(String raw) {
-        String value=requirePattern(raw,"[0-9]{4}-[0-9]{2}-[0-9]{2}",ErrorCode.DATE_SYNTAX);
+        String value = requirePattern(raw, "[0-9]{4}-[0-9]{2}-[0-9]{2}", ErrorCode.DATE_SYNTAX);
         java.time.LocalDate day;
-        try { day=java.time.LocalDate.parse(value); }
-        catch(java.time.DateTimeException e) { throw new UserInputException(ErrorCode.DATE_CALENDAR); }
-        if(day.isBefore(Limits.MIN_DATE)||day.isAfter(Limits.MAX_DATE)) throw new UserInputException(ErrorCode.DATE_RANGE);
+        try {
+            day = java.time.LocalDate.parse(value);
+        } catch (java.time.DateTimeException e) {
+            throw new UserInputException(ErrorCode.DATE_CALENDAR);
+        }
+        if (day.isBefore(Limits.MIN_DATE) || day.isAfter(Limits.MAX_DATE))
+            throw new UserInputException(ErrorCode.DATE_RANGE);
         return day;
     }
+
     public inventory.entity.PhysicalKey parsePhysicalKey(String raw) {
-        String value=requirePattern(raw,"P[0-9]{5}-[0-9]{3}",ErrorCode.PHYSICAL_SYNTAX);
-        int suffix=Integer.parseInt(value.substring(7));
-        if(value.substring(1,6).equals("00000")||suffix==0) throw new UserInputException(ErrorCode.PHYSICAL_RANGE);
-        return new inventory.entity.PhysicalKey(value.substring(0,6),suffix);
+        String value = requirePattern(raw, "P[0-9]{5}-[0-9]{3}", ErrorCode.PHYSICAL_SYNTAX);
+        int suffix = Integer.parseInt(value.substring(7));
+        if (value.substring(1, 6).equals("00000") || suffix == 0)
+            throw new UserInputException(ErrorCode.PHYSICAL_RANGE);
+        return new inventory.entity.PhysicalKey(value.substring(0, 6), suffix);
     }
+
     private String requirePattern(String raw, String pattern, ErrorCode code) {
         String value = normalizeSpaces(raw);
         if (!value.matches(pattern)) {

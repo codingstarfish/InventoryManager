@@ -35,7 +35,7 @@ public class StartupLoader {
     }
 
     /**
-     * 파일 생성/접근 확인 → 두 파일 문법 검사 → 의미 검사 → DB에 적재
+     * 파일 생성/접근 확인 → 세 파일 문법 검사 → 의미 검사 → DB에 적재
      * 검사 실패 시 StartupDataException. 적재 후 낱개는 접미번호순으로 정렬
      *
      * @param db 검사를 통과한 상품과 낱개 데이터를 추가할 DB
@@ -55,13 +55,15 @@ public class StartupLoader {
         for (String line : physicalLines) {
             physicalRows.add(parser.parsePhysicalSyntax(line));
         }
-        validator.validate(logicalRows, physicalRows);
+        String dateText=parser.parseDateSyntax(readStrictLines(access.datePath()));
+        validator.validate(logicalRows, physicalRows, dateText);
+        db.loadDate(java.util.Optional.ofNullable(dateText).map(java.time.LocalDate::parse));
         for (RawLogicalRow row : logicalRows) {
-            db.addItem(new LogicalItem(row.code(), row.name(), row.size(), row.price()));
+            db.addItem(new LogicalItem(row.code(), row.name(), row.size(), row.price(), row.shelfLifeDays()));
         }
         for (RawPhysicalRow row : physicalRows) {
             db.findPhysicalItems(row.logicalCode())
-                    .add(new PhysicalItem(row.logicalCode(), row.suffix(), row.sold()));
+                    .add(new PhysicalItem(row.logicalCode(), row.suffix(), row.state(), java.time.LocalDate.parse(row.producedOn()), row.soldOn().equals("-") ? java.util.Optional.empty() : java.util.Optional.of(java.time.LocalDate.parse(row.soldOn())), row.refunded()));
         }
         for (RawLogicalRow row : logicalRows) {
             db.findPhysicalItems(row.code()).sort(Comparator.comparingInt(PhysicalItem::suffix));

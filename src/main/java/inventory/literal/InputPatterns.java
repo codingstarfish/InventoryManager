@@ -2,7 +2,7 @@ package inventory.literal;
 
 
 public final class InputPatterns {
-    public static final String MAIN_MENU = "[1-5]";
+    public static final String MAIN_MENU = "[1-7]";
 
     public static final String QUERY_MODE = "[12]";
 
@@ -22,7 +22,6 @@ public final class InputPatterns {
 
     public static final String FILE_SOLD = "[01]";
 
-    
     private InputPatterns() {
     }
 }

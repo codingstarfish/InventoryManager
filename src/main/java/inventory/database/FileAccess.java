@@ -33,8 +33,17 @@ public class FileAccess {
             throw new StartupDataException(List.of(DataPaths.DATA_DIR),
                     "데이터 디렉터리나 빈 데이터 파일을 생성할 수 없습니다.", e);
         }
-        for (Path path : List.of(logicalPath(), physicalPath())) {
+        for (Path path : List.of(logicalPath(), physicalPath(), datePath())) {
             try {
+                try (var entries = Files.list(data)) {
+                    var wrongCase = entries.filter(entry -> entry.getFileName().toString()
+                            .equalsIgnoreCase(path.getFileName().toString()))
+                            .filter(entry -> !entry.getFileName().equals(path.getFileName())).findFirst();
+                    if (wrongCase.isPresent()) {
+                        throw new StartupDataException(List.of(wrongCase.get().getFileName().toString()),
+                                "데이터 파일명은 대소문자를 구분하여 정확히 지정해야 합니다.");
+                    }
+                }
                 if (!Files.exists(path)) {
                     Files.createFile(path);
                 }
@@ -46,14 +55,14 @@ public class FileAccess {
     }
 
     /**
-     * 두 파일이 일반 파일인지, 읽기/쓰기가 가능한지 확인
+     * 세 파일이 일반 파일인지, 읽기/쓰기가 가능한지 확인
      * 접근할 수 없으면 StartupDataException
      *
      * @throws StartupDataException 데이터 파일 경로가 일반 파일이 아니거나, 읽기·쓰기가 불가능하거나,
      *         보안 제한으로 파일 상태나 접근 권한을 확인할 수 없는 경우
      */
     public void checkReadableWritable() {
-        for (Path path : List.of(logicalPath(), physicalPath())) {
+        for (Path path : List.of(logicalPath(), physicalPath(), datePath())) {
             String fileName = path.getFileName().toString();
             String reason = "데이터 파일을 읽을 수 없습니다.";
             try {
@@ -87,6 +96,7 @@ public class FileAccess {
      *
      * @return 낱개 데이터 파일의 절대 경로
      */
+    public Path datePath() { return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.DATE_FILE); }
     public Path physicalPath() {
         return workingDir.toAbsolutePath().resolve(DataPaths.DATA_DIR).resolve(DataPaths.PHYSICAL_FILE);
     }

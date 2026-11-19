@@ -10,13 +10,13 @@ import java.util.OptionalInt;
  * @param received 판매된 낱개를 포함한 누적 입고 수(0~999개)
  * @param sold 누적 판매 수(개). 0 이상이며 누적 입고 수 이하
  */
-public record StockSummary(LogicalItem item, int received, int sold) {
+public record StockSummary(LogicalItem item, int received, int sold, int discarded) {
     /**
-     * 현재 재고 = 누적 입고 - 누적 판매 (0~999)
+     * 현재 재고 = 누적 입고 - 판매 - 폐기 (0~999)
      * @return 현재 미판매 재고 수(개)
      */
     public int current() {
-        return received - sold;
+        return received - sold - discarded;
     }
 
     /**

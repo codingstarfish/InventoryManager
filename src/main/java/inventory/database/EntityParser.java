@@ -26,8 +26,8 @@ public class EntityParser {
             throw syntaxError(file, "빈 행은 허용하지 않습니다.");
         }
         String[] fields = line.split(",", -1);
-        if (fields.length != 4) {
-            throw syntaxError(file, "논리 파일의 각 행은 4개 필드여야 합니다.");
+        if (fields.length != 5) {
+            throw syntaxError(file, "논리 파일의 각 행은 5개 필드여야 합니다.");
         }
         if (!fields[0].matches(InputPatterns.NAME) || fields[0].startsWith(" ") || fields[0].endsWith(" ")) {
             throw syntaxError(file,
@@ -39,12 +39,13 @@ public class EntityParser {
                 "크기는 첫 문자가 1~9인 숫자 1~4자리여야 합니다.");
         checkPattern(fields[3], InputPatterns.FILE_PRICE, file,
                 "가격은 첫 문자가 1~9인 숫자 1~8자리여야 합니다.");
-        return new RawLogicalRow(fields[0], fields[1], Integer.parseInt(fields[2]), Integer.parseInt(fields[3]));
+        checkPattern(fields[4], "0|[1-9][0-9]{0,3}", file, "유통기한 일수는 0이거나 첫 문자가 1~9인 숫자 1~4자리여야 합니다.");
+        return new RawLogicalRow(fields[0], fields[1], Integer.parseInt(fields[2]), Integer.parseInt(fields[3]), Integer.parseInt(fields[4]));
     }
 
     /**
      * 논리코드, 접미번호, 판매여부 순서로 문법 검사
-     * 판매여부는 0/1을 false/true로 변환. 접미번호 000은 의미 검사에서 거절
+     * 상태는 0/1/2로 변환. 날짜는 원문으로 보존하고 의미 검사에서 확인
      *
      * @param line 물리 파일에서 읽은 개행 문자를 제외한 한 행
      * @return 문법 검사를 통과한 논리코드·접미번호·판매여부 데이터
@@ -56,16 +57,19 @@ public class EntityParser {
             throw syntaxError(file, "빈 행은 허용하지 않습니다.");
         }
         String[] fields = line.split(",", -1);
-        if (fields.length != 3) {
-            throw syntaxError(file, "물리 파일의 각 행은 3개 필드여야 합니다.");
+        if (fields.length != 6) {
+            throw syntaxError(file, "물리 파일의 각 행은 6개 필드여야 합니다.");
         }
         checkPattern(fields[0], InputPatterns.LOGICAL_CODE, file,
                 "논리코드는 대문자 P와 숫자 5자리여야 합니다.");
         checkPattern(fields[1], InputPatterns.FILE_SUFFIX, file,
                 "접미번호는 숫자 세 자리여야 합니다.");
-        checkPattern(fields[2], InputPatterns.FILE_SOLD, file,
-                "판매여부는 0 또는 1 한 자리여야 합니다.");
-        return new RawPhysicalRow(fields[0], Integer.parseInt(fields[1]), fields[2].equals("1"));
+        checkPattern(fields[2], "[012]", file,
+                "상태는 0, 1, 2 중 한 자리여야 합니다.");
+        checkPattern(fields[3], "[0-9]{4}-[0-9]{2}-[0-9]{2}", file, "생산일은 YYYY-MM-DD 형식이어야 합니다.");
+        checkPattern(fields[4], "-|[0-9]{4}-[0-9]{2}-[0-9]{2}", file, "판매일은 YYYY-MM-DD 형식이거나 하이픈(-) 한 개여야 합니다.");
+        checkPattern(fields[5], "[01]", file, "환불이력은 0 또는 1 한 자리여야 합니다.");
+        return new RawPhysicalRow(fields[0], Integer.parseInt(fields[1]), inventory.entity.ItemState.values()[Integer.parseInt(fields[2])], fields[3], fields[4], fields[5].equals("1"));
     }
 
     /**
@@ -77,6 +81,12 @@ public class EntityParser {
      * @param reason 정규식 불일치 시 전달할 오류 설명
      * @throws StartupDataException 필드 전체가 지정한 정규식과 일치하지 않는 경우
      */
+    public String parseDateSyntax(List<String> lines) {
+        if(lines.size()>1) throw syntaxError(DataPaths.DATE_FILE,"날짜 파일은 최대 한 행이어야 합니다.");
+        if(lines.isEmpty()) return null;
+        checkPattern(lines.get(0),"[0-9]{4}-[0-9]{2}-[0-9]{2}",DataPaths.DATE_FILE,"가상날짜는 YYYY-MM-DD 형식이어야 합니다.");
+        return lines.get(0);
+    }
     private void checkPattern(String value, String pattern, String file, String reason) {
         if (!value.matches(pattern)) {
             throw syntaxError(file, reason);

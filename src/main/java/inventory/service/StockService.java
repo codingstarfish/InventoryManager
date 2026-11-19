@@ -1,105 +1,87 @@
 package inventory.service;
-
 import inventory.database.InventoryDatabase;
-import inventory.dto.StockChangeResult;
-import inventory.dto.StockSummary;
-import inventory.entity.PhysicalItem;
+import inventory.dto.*;
+import inventory.entity.*;
 import inventory.exception.BusinessRuleException;
-import inventory.literal.ErrorCode;
-import inventory.literal.Limits;
-import java.util.List;
-import java.util.Map;
+import inventory.literal.*;
+import inventory.validation.DomainRules;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 
-// 재고 입고, 상품 판매
 public class StockService {
-    private final InventoryDatabase db;
-
-    /**
-     * @param db 입고와 판매를 처리하고 저장할 데이터베이스
-     */
-    public StockService(InventoryDatabase db) {
-        this.db = db;
-    }
-
-    /**
-     * 누적 입고가 999개면 상품 선택 단계에서 바로 거절
-     *
-     * @param code 입고할 등록 상품의 논리코드
-     * @return 접미번호를 추가 발급할 수 있는 선택 상품의 현재 재고 요약
-     * @throws BusinessRuleException 미등록 상품이면 {@code CODE_NOT_FOUND},
-     *         누적 입고가 999개여서 접미번호를 더 발급할 수 없으면 {@code LIMIT_PHYSICAL_CODE}
-     */
-    public StockSummary selectInbound(String code) {
-        StockSummary summary = db.summarize(code);
-        if (summary.received() == Limits.MAX_SUFFIX) {
-            throw new BusinessRuleException(ErrorCode.LIMIT_PHYSICAL_CODE, Map.of());
-        }
-        return summary;
-    }
-
-    /**
-     * 재고 0개인 상품도 선택 가능. 수량 입력 후 재고 부족 안내
-     *
-     * @param code 판매할 등록 상품의 논리코드
-     * @return 선택 상품의 현재 재고 요약
-     * @throws BusinessRuleException 상품이 등록되어 있지 않으면 {@code CODE_NOT_FOUND}
-     */
-    public StockSummary selectSale(String code) {
-        return db.summarize(code);
-    }
-
-    /**
-     * 발급 가능 수와 창고 용량을 확인한 뒤 입고하고 저장
-     *
-     * @param summary 입고할 상품의 최신 재고 요약
-     * @param quantity 1~100 범위 검증을 마친 입고 수량(개)
-     * @return 입고한 수량과 입고 후 현재 재고 수량
-     * @throws BusinessRuleException 입고 수량이 접미번호 발급 가능 수를 초과하면 {@code SUFFIX_SHORTAGE},
-     *         입고에 필요한 용량이 창고의 남은 용량을 초과하면 {@code CAPACITY_SHORTAGE}
-     * @throws inventory.exception.SaveFailureException 입고한 낱개 상품을 물리 파일에 저장하지 못한 경우
-     */
-    public StockChangeResult receive(StockSummary summary, int quantity) {
-        if (quantity > summary.issuable()) {
-            throw new BusinessRuleException(ErrorCode.SUFFIX_SHORTAGE, Map.of("issuable", (long) summary.issuable()));
-        }
-        long required = (long) summary.item().size() * quantity;
-        long remaining = db.warehouse().remaining();
-        if (required > remaining) {
-            throw new BusinessRuleException(ErrorCode.CAPACITY_SHORTAGE,
-                    Map.of("required", required, "remaining", remaining));
-        }
-        String code = summary.item().code();
-        List<PhysicalItem> rows = db.findPhysicalItems(code);
-        for (int i = 1; i <= quantity; i++) {
-            rows.add(new PhysicalItem(code, summary.received() + i, false));
-        }
-        db.savePhysical();
-        return new StockChangeResult(quantity, summary.current() + quantity);
-    }
-
-    /**
-     * 재고 확인 후 접미번호가 작은 미판매 낱개부터 판매하고 저장
-     *
-     * @param summary 판매할 상품의 최신 재고 요약
-     * @param quantity 1~100 범위 검증을 마친 판매 수량(개)
-     * @return 판매한 수량과 판매 후 현재 재고 수량
-     * @throws BusinessRuleException 판매 수량이 현재 재고보다 많으면 {@code STOCK_SHORTAGE}
-     * @throws inventory.exception.SaveFailureException 낱개 상품의 판매 상태를 물리 파일에 저장하지 못한 경우
-     */
-    public StockChangeResult sell(StockSummary summary, int quantity) {
-        if (quantity > summary.current()) {
-            throw new BusinessRuleException(ErrorCode.STOCK_SHORTAGE, Map.of("current", (long) summary.current()));
-        }
-        List<PhysicalItem> rows = db.findPhysicalItems(summary.item().code());
-        int sold = 0;
-        for (int i = 0; i < rows.size() && sold < quantity; i++) {
-            PhysicalItem row = rows.get(i);
-            if (!row.sold()) {
-                rows.set(i, row.markSold());
-                sold++;
-            }
-        }
-        db.savePhysical();
-        return new StockChangeResult(quantity, summary.current() - quantity);
-    }
+ private final InventoryDatabase db;
+ public StockService(InventoryDatabase db) { this.db=db; }
+ private void reject(ErrorCode code) { throw new BusinessRuleException(code,Map.of()); }
+ public StockSummary selectInbound(String code) {
+  var s=db.summarize(code);
+  if(s.received()==Limits.MAX_SUFFIX) reject(ErrorCode.LIMIT_PHYSICAL_CODE);
+  return s;
+ }
+ public StockSummary selectSale(String code) { return db.summarize(code); }
+ public void validateReceiptQuantity(StockSummary summary,int n) {
+  var s=db.summarize(summary.item().code());
+  if(n>s.issuable()) throw new BusinessRuleException(ErrorCode.SUFFIX_SHORTAGE,Map.of("issuable",Integer.toString(s.issuable())));
+  long required=(long)s.item().size()*n, remaining=db.warehouse().remaining();
+  if(required>remaining) throw new BusinessRuleException(ErrorCode.CAPACITY_SHORTAGE,Map.of("required",Long.toString(required),"remaining",Long.toString(remaining)));
+ }
+ public StockChangeResult receive(StockSummary summary,int n,LocalDate produced) {
+  validateReceiptQuantity(summary,n);
+  var s=db.summarize(summary.item().code());
+  var day=db.currentDate().orElseThrow();
+  if(produced.isAfter(day)) reject(ErrorCode.FUTURE_PRODUCTION);
+  if(s.item().shelfLifeDays()>0 && produced.plusDays(s.item().shelfLifeDays()).isBefore(day)) reject(ErrorCode.EXPIRED);
+  var rows=db.findPhysicalItems(s.item().code());
+  for(int i=1;i<=n;i++) rows.add(new PhysicalItem(s.item().code(),s.received()+i,ItemState.IN_STOCK,produced,Optional.empty(),false));
+  db.savePhysical();
+  return new StockChangeResult(n,s.current()+n);
+ }
+ public List<PhysicalItem> saleCandidates(String code) {
+  var item=db.requireItem(code);
+  Comparator<PhysicalItem> order=Comparator.comparingInt(PhysicalItem::suffix);
+  if(item.shelfLifeDays()>0) order=Comparator.comparing((PhysicalItem r)->DomainRules.expiry(item,r).orElseThrow()).thenComparingInt(PhysicalItem::suffix);
+  return db.findPhysicalItems(code).stream().filter(r->r.state()==ItemState.IN_STOCK).sorted(order).toList();
+ }
+ public SaleResult sell(StockSummary s,int n) {
+  var candidates=saleCandidates(s.item().code());
+  if(n>candidates.size()) throw new BusinessRuleException(ErrorCode.STOCK_SHORTAGE,Map.of("current",Integer.toString(candidates.size())));
+  return completeSale(s.item(),candidates.subList(0,n));
+ }
+ private PhysicalItem requireUnit(PhysicalKey key) {
+  var rows=db.findPhysicalItems(key.logicalCode());
+  if(rows==null || key.suffix()<1 || key.suffix()>rows.size()) reject(ErrorCode.PHYSICAL_NOT_FOUND);
+  return rows.get(key.suffix()-1);
+ }
+ public SaleResult sellOne(StockSummary s,PhysicalKey key) {
+  if(!s.item().code().equals(key.logicalCode())) reject(ErrorCode.WRONG_PRODUCT);
+  var row=requireUnit(key);
+  if(row.state()!=ItemState.IN_STOCK) reject(ErrorCode.NOT_IN_STOCK);
+  return completeSale(s.item(),List.of(row));
+ }
+ private SaleResult completeSale(LogicalItem item,List<PhysicalItem> chosen) {
+  var lines=new ArrayList<SaleLine>();
+  long total=0;
+  for(var row:chosen) {
+   long price=DomainRules.salePrice(item,row); total+=price;
+   lines.add(new SaleLine(new PhysicalKey(row.logicalCode(),row.suffix()),item.price(),price,row.refunded()));
+   db.findPhysicalItems(item.code()).set(row.suffix()-1,row.markSold(db.currentDate().orElseThrow()));
+  }
+  db.savePhysical();
+  return new SaleResult(lines,total,db.summarize(item.code()).current());
+ }
+ public RefundResult refund(PhysicalKey key) {
+  var row=requireUnit(key);
+  if(!row.sold()) reject(ErrorCode.NOT_SOLD);
+  var day=db.currentDate().orElseThrow();
+  long elapsed=ChronoUnit.DAYS.between(row.soldOn().orElseThrow(),day);
+  if(elapsed<0||elapsed>Limits.REFUND_DAYS) reject(ErrorCode.REFUND_PERIOD);
+  var item=db.requireItem(key.logicalCode());
+  if(DomainRules.expiry(item,row).filter(d->d.isBefore(day)).isPresent()) reject(ErrorCode.EXPIRED);
+  if(row.refunded()) reject(ErrorCode.ALREADY_REFUNDED);
+  if(item.size()>db.warehouse().remaining()) throw new BusinessRuleException(ErrorCode.CAPACITY_SHORTAGE,Map.of("required",Integer.toString(item.size()),"remaining",Long.toString(db.warehouse().remaining())));
+  var refunded=row.refund();
+  db.findPhysicalItems(key.logicalCode()).set(key.suffix()-1,refunded);
+  db.savePhysical();
+  return new RefundResult(key,item.price(),db.summarize(key.logicalCode()).current(),DomainRules.salePrice(item,refunded));
+ }
 }

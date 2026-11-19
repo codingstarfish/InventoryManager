@@ -20,6 +20,7 @@ public class EntityWriter {
     private final Path logicalPath;
     /** 물리 파일 경로 */
     private final Path physicalPath;
+    private final Path datePath;
 
     /**
      * @param logicalPath 전체 논리 상품 정보를 덮어쓸 데이터 파일 경로
@@ -28,11 +29,12 @@ public class EntityWriter {
     public EntityWriter(Path logicalPath, Path physicalPath) {
         this.logicalPath = logicalPath;
         this.physicalPath = physicalPath;
+        this.datePath = logicalPath.resolveSibling("virtual_date.txt");
     }
 
     /**
      * 전체 상품을 논리코드순으로 정렬해 논리 파일만 저장
-     * 파일 형식: 상품명,논리코드,크기,가격
+     * 파일 형식: 상품명,논리코드,크기,가격,유통기한일수
      *
      * @param items 파일에 저장할 전체 논리 상품 목록
      * @throws SaveFailureException 논리 파일을 열거나 쓰거나 버퍼 내용을 반영하거나 닫는 데 실패한 경우
@@ -41,13 +43,13 @@ public class EntityWriter {
         List<LogicalItem> ordered = items.stream()
                 .sorted(Comparator.comparing(LogicalItem::code)).toList();
         List<String> lines = ordered.stream().map(item -> item.name() + "," + item.code()
-                + "," + item.size() + "," + item.price()).toList();
+                + "," + item.size() + "," + item.price() + "," + item.shelfLifeDays()).toList();
         writeLines(logicalPath, lines);
     }
 
     /**
      * 판매된 낱개도 포함해 논리코드, 접미번호순으로 물리 파일만 저장
-     * 파일 형식: 논리코드,세 자리 접미번호,판매여부(0/1)
+     * 파일 형식: 논리코드,세 자리 접미번호,상태,생산일,판매일,환불이력
      *
      * @param items 판매된 낱개까지 포함한 전체 낱개 목록
      * @throws SaveFailureException 물리 파일을 열거나 쓰거나 버퍼 내용을 반영하거나 닫는 데 실패한 경우
@@ -56,7 +58,7 @@ public class EntityWriter {
         List<PhysicalItem> ordered = items.stream()
                 .sorted(Comparator.comparing(PhysicalItem::logicalCode).thenComparingInt(PhysicalItem::suffix)).toList();
         List<String> lines = ordered.stream().map(item -> item.logicalCode() + ","
-                + DomainRules.formatSuffix(item.suffix()) + "," + (item.sold() ? "1" : "0")).toList();
+                + DomainRules.formatSuffix(item.suffix()) + "," + (item.state().value()+","+item.producedOn()+","+item.soldOn().map(Object::toString).orElse("-")+","+(item.refunded()?"1":"0"))).toList();
         writeLines(physicalPath, lines);
     }
 
@@ -69,6 +71,7 @@ public class EntityWriter {
      * @param lines 개행을 제외한 저장할 행 목록, 빈 목록이면 파일 내용을 비움
      * @throws SaveFailureException 파일을 열거나 쓰거나 버퍼 내용을 반영하거나 닫는 데 실패한 경우
      */
+    public void writeDate(java.time.LocalDate day) { writeLines(datePath, List.of(day.toString())); }
     private void writeLines(Path path, List<String> lines) {
         try (BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8,
                 StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)) {

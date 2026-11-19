@@ -12,7 +12,7 @@ public class InputValidator {
     public InputValidator() {
     }
 
-   
+
     /**
      * 양 끝의 일반 공백(U+0020)만 제거. 탭은 남김
      *
@@ -32,18 +32,18 @@ public class InputValidator {
     }
 
     /**
-     * 주 메뉴: 1~5
+     * 주 메뉴: 1~7
      *
      * @param raw 사용자가 입력한 주 메뉴 번호 원문
-     * @return 검증된 주 메뉴 번호(1~5)
-     * @throws UserInputException 공백 정리 후 1~5 중 한 자리가 아니면 {@code MENU_SYNTAX}
+     * @return 검증된 주 메뉴 번호(1~7)
+     * @throws UserInputException 공백 정리 후 1~7 중 한 자리가 아니면 {@code MENU_SYNTAX}
      */
     public int parseMainMenu(String raw) {
         String value = requirePattern(raw, InputPatterns.MAIN_MENU, ErrorCode.MENU_SYNTAX);
         return value.charAt(0) - '0';
     }
 
-    
+
     /**
      * 조회 방식: 1은 전체, 2는 단일 상품
      *
@@ -188,6 +188,26 @@ public class InputValidator {
      * @return 양 끝의 일반 공백을 제거하고 정규식 검증을 통과한 문자열
      * @throws UserInputException 공백 정리 후 입력 문자열 전체가 정규식과 맞지 않는 경우. 전달받은 오류 코드 사용
      */
+    public int parseShelfLife(String raw) {
+        String value = requirePattern(raw, InputPatterns.INPUT_DECIMAL, ErrorCode.SHELF_SYNTAX);
+        long n=Long.parseLong(value);
+        if(n>Limits.MAX_SHELF_LIFE) throw new UserInputException(ErrorCode.SHELF_RANGE);
+        return (int)n;
+    }
+    public java.time.LocalDate parseDate(String raw) {
+        String value=requirePattern(raw,"[0-9]{4}-[0-9]{2}-[0-9]{2}",ErrorCode.DATE_SYNTAX);
+        java.time.LocalDate day;
+        try { day=java.time.LocalDate.parse(value); }
+        catch(java.time.DateTimeException e) { throw new UserInputException(ErrorCode.DATE_CALENDAR); }
+        if(day.isBefore(Limits.MIN_DATE)||day.isAfter(Limits.MAX_DATE)) throw new UserInputException(ErrorCode.DATE_RANGE);
+        return day;
+    }
+    public inventory.entity.PhysicalKey parsePhysicalKey(String raw) {
+        String value=requirePattern(raw,"P[0-9]{5}-[0-9]{3}",ErrorCode.PHYSICAL_SYNTAX);
+        int suffix=Integer.parseInt(value.substring(7));
+        if(value.substring(1,6).equals("00000")||suffix==0) throw new UserInputException(ErrorCode.PHYSICAL_RANGE);
+        return new inventory.entity.PhysicalKey(value.substring(0,6),suffix);
+    }
     private String requirePattern(String raw, String pattern, ErrorCode code) {
         String value = normalizeSpaces(raw);
         if (!value.matches(pattern)) {

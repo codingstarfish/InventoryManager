@@ -16,7 +16,7 @@ import java.util.Map;
 
 // 출력 전용
 public class ConsoleView {
-    
+
     private final PrintWriter out;
 
     /**
@@ -28,17 +28,19 @@ public class ConsoleView {
         this.out = out;
     }
 
-    
+
     // 주 메뉴와 프롬프트 출력
     public void mainMenu() {
         out.println("==================================================");
-        out.println("        편의점 재고 관리 시스템 (v1.0)");
+        out.println("        편의점 재고 관리 시스템 (v2.0)");
         out.println("==================================================");
         out.println("1. 신규 상품 등록");
         out.println("2. 재고 입고");
         out.println("3. 상품 판매");
         out.println("4. 재고 조회");
         out.println("5. 종료");
+        out.println("6. 상품 환불");
+        out.println("7. 가상날짜 변경");
         out.println("--------------------------------------------------");
         out.print("ConvenienceStore> ");
         out.flush();
@@ -51,6 +53,11 @@ public class ConsoleView {
      */
     public void prompt(Field field) {
         String text = switch (field) {
+            case SHELF_LIFE -> "유통기한 일수(0: 없음)";
+            case DATE -> "가상날짜(YYYY-MM-DD)";
+            case PRODUCED_ON -> "생산일자(YYYY-MM-DD)";
+            case PHYSICAL_KEY -> "물리적 상품코드";
+            case SALE_MODE -> "판매 방식(1: 임박 순, 2: 직접 지정)";
             case NAME -> "신규 상품명";
             case SIZE -> "상품 크기(용량 단위)";
             case PRICE -> "판매 가격(원)";
@@ -85,9 +92,25 @@ public class ConsoleView {
      * @param details 오류 문구에 넣을 수치. 접미번호 부족은 issuable, 용량 부족은
      *                required/remaining, 재고 부족은 current를 사용하며 나머지는 빈 Map
      */
-    public void error(ErrorCode code, Map<String, Long> details) {
+    public void error(ErrorCode code, Map<String, String> details) {
         String message = switch (code) {
-            case MENU_SYNTAX -> "메뉴는 1~5 중 하나를 입력해야 합니다.";
+            case DATE_SYNTAX -> "날짜는 YYYY-MM-DD 형식이어야 합니다.";
+case DATE_CALENDAR -> "존재하지 않는 날짜입니다.";
+case DATE_RANGE -> "날짜는 2000-01-01~2037-12-31 범위여야 합니다.";
+case SHELF_SYNTAX -> "유통기한 일수는 숫자 1~10자리여야 합니다.";
+case SHELF_RANGE -> "유통기한 일수는 0 또는 1~3650이어야 합니다.";
+case PHYSICAL_SYNTAX -> "물리코드는 P00001-001 형식이어야 합니다.";
+case PHYSICAL_RANGE -> "논리번호는 00001~99999, 접미번호는 001~999여야 합니다.";
+case PHYSICAL_NOT_FOUND -> "존재하지 않는 물리코드입니다.";
+case WRONG_PRODUCT -> "선택한 상품과 물리코드가 일치하지 않습니다.";
+case NOT_IN_STOCK -> "판매 가능 재고가 아닙니다.";
+case NOT_SOLD -> "판매 상태인 상품만 환불할 수 있습니다.";
+case REFUND_PERIOD -> "환불 기한 14일이 지났습니다.";
+case EXPIRED -> "유통기한이 지났습니다.";
+case ALREADY_REFUNDED -> "이미 환불한 상품입니다.";
+case FUTURE_PRODUCTION -> "생산일이 가상날짜보다 이후입니다.";
+case DATE_BACKWARD -> "현재 날짜 이전으로 변경할 수 없습니다.";
+            case MENU_SYNTAX -> "메뉴는 1~7 중 하나를 입력해야 합니다.";
             case NAME_SYNTAX -> "상품명은 완성형 한글, 영문, 숫자, 공백으로 구성된 1~30자여야 합니다.";
             case SIZE_SYNTAX -> "상품 크기는 숫자 1~10자리로 입력해야 합니다.";
             case SIZE_RANGE -> "상품 크기는 1~1000 용량 단위여야 합니다.";
@@ -113,7 +136,7 @@ public class ConsoleView {
         line(message);
     }
 
-    
+
     /**
      * 상품이 없어 입고/판매 불가할 때 안내. QUERY로 호출하면 예외
      *
@@ -134,7 +157,7 @@ public class ConsoleView {
      * @param summary 입고·판매 대상으로 선택한 상품 정보와 최신 수량 요약
      */
     public void selected(StockSummary summary) {
-        line("상품명: " + summary.item().name() + ", 현재 재고: " + summary.current() + "개");
+        line("상품명: " + summary.item().name() + ", 유통기한: " + shelfLife(summary.item()) + ", 현재 재고: " + summary.current() + "개");
     }
 
     /**
@@ -145,7 +168,7 @@ public class ConsoleView {
     public void registered(LogicalItem item) {
         line("신규 상품이 등록되었습니다.");
         line("논리코드: " + item.code() + ", 상품명: " + item.name()
-                + ", 크기: " + item.size() + ", 가격: " + item.price() + "원, 현재 재고: 0개");
+                + ", 유통기한: " + shelfLife(item) + ", 크기: " + item.size() + ", 가격: " + item.price() + "원, 현재 재고: 0개");
     }
 
     /**
@@ -163,9 +186,10 @@ public class ConsoleView {
      *
      * @param result 저장에 성공한 판매 수량과 판매 후 현재 재고
      */
-    public void sold(StockChangeResult result) {
-        line("판매가 완료되었습니다. (판매 수량: " + result.quantity()
-                + "개, 현재 재고: " + result.currentAfter() + "개)");
+    public void sold(inventory.dto.SaleResult result) {
+        line("판매가 완료되었습니다. (판매 수량: " + result.lines().size()
+                + "개, 합계: " + result.totalAmount() + "원, 현재 재고: " + result.currentAfter() + "개)");
+        for(var row:result.lines()) line(row.key()+": "+row.salePrice()+"원"+(row.discounted()?" (환불 할인, 정가: "+row.regularPrice()+"원)":""));
     }
 
     /**
@@ -194,7 +218,10 @@ public class ConsoleView {
             line("입고된 물리적 상품이 없습니다.");
         }
         for (var item : result.physicalItems()) {
-            line("물리코드: " + item.physicalCode() + ", 판매여부: " + (item.sold() ? "1" : "0"));
+            line("물리코드: "+item.physicalCode()+", 상태: "+item.state().value()+", 생산일: "+item.producedOn()
+                +", 만료일: "+DomainRules.expiry(result.summary().item(),item).map(Object::toString).orElse("-")
+                +", 판매일: "+item.soldOn().map(Object::toString).orElse("-")+", 환불이력: "+(item.refunded()?1:0)
+                +", 판매가: "+DomainRules.salePrice(result.summary().item(),item)+"원");
         }
     }
 
@@ -209,13 +236,13 @@ public class ConsoleView {
         String next = summary.nextSuffix().isPresent()
                 ? DomainRules.formatSuffix(summary.nextSuffix().getAsInt()) : "없음";
         return "논리코드: " + item.code() + ", 상품명: " + item.name()
-                + ", 크기: " + item.size() + ", 가격: " + item.price() + "원"
+                + ", 유통기한: " + shelfLife(item) + ", 크기: " + item.size() + ", 가격: " + item.price() + "원"
                 + ", 누적 입고: " + summary.received() + "개, 누적 판매: " + summary.sold()
-                + "개, 현재 재고: " + summary.current() + "개, 발급 가능 수: " + summary.issuable()
+                + "개, 폐기: " + summary.discarded() + "개, 현재 재고: " + summary.current() + "개, 발급 가능 수: " + summary.issuable()
                 + "개, 다음 접미번호: " + next;
     }
 
-    
+
     // 시작 검사 전 출력
     public void startupChecking() {
         line("[INFO] 데이터 파일 검사를 진행합니다.");
@@ -246,12 +273,12 @@ public class ConsoleView {
         line("프로그램을 종료합니다.");
     }
 
-    // n 
+    // n
     public void cancelled() {
         line("작업을 취소했습니다.");
     }
 
-    // 종료 메뉴 선택 시 
+    // 종료 메뉴 선택 시
     public void normalExit() {
         line("프로그램을 종료합니다.");
     }
@@ -266,7 +293,18 @@ public class ConsoleView {
      *
      * @param text 개행을 붙여 출력할 안내 또는 결과 문자열
      */
-    private void line(String text) {
+    private String shelfLife(LogicalItem item) { return item.shelfLifeDays()==0 ? "없음" : item.shelfLifeDays()+"일"; }
+    public void candidate(LogicalItem item, inventory.entity.PhysicalItem row) {
+        line(row.physicalCode()+", 생산일: "+row.producedOn()+", 만료일: "+DomainRules.expiry(item,row).orElseThrow()+", 판매가: "+DomainRules.salePrice(item,row)+"원");
+    }
+    public void refunded(inventory.dto.RefundResult result) {
+        line("환불이 완료되었습니다. 물리코드: "+result.key()+", 환불 금액: "+result.refundAmount()+"원, 현재 재고: "+result.currentAfter()+"개, 재판매가: "+result.resalePrice()+"원");
+    }
+    public void dateChanged(inventory.dto.DateChangeResult result) {
+        line("가상날짜 변경 완료: "+result.newDate()+", 폐기: "+result.discarded().size()+"개");
+        result.discarded().forEach(row->line(row.key()+", 만료일: "+row.expiryDate()));
+    }
+    public void line(String text) {
         out.println(text);
         out.flush();
     }

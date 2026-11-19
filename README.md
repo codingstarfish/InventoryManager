@@ -1,6 +1,6 @@
 # InventoryManager
 
-2026-2 전공기초프로젝트 A02팀의 **편의점 재고 관리 시스템**입니다. 터미널에서 상품 등록, 재고 입고, 상품 판매, 재고 조회를 수행하며, 두 개의 UTF-8 텍스트 파일에 데이터를 저장합니다.
+2026-2 전공기초프로젝트 A02팀의 **편의점 재고 관리 시스템**입니다. 터미널에서 상품 등록, 재고 입고, 상품 판매, 환불, 가상날짜 변경, 재고 조회를 수행하며, 세 개의 UTF-8 텍스트 파일에 데이터를 저장합니다.
 
 ## 실행 환경
 
@@ -73,20 +73,29 @@ java -jar InventoryManager.jar
 
 | 경로 | 저장 내용 |
 | --- | --- |
-| `{작업 디렉터리}/data/logical_item.txt` | 상품명, 논리코드, 크기, 가격 |
-| `{작업 디렉터리}/data/physical_item.txt` | 논리코드, 접미번호, 판매여부 |
+| `{작업 디렉터리}/data/logical_item.txt` | 상품명, 논리코드, 크기, 가격, 유통기한일수 |
+| `{작업 디렉터리}/data/physical_item.txt` | 논리코드, 접미번호, 상태(0: 재고 / 1: 판매 / 2: 폐기), 생산일, 판매일(- 허용), 환불이력 |
+| `{작업 디렉터리}/data/virtual_date.txt` | 가상날짜 한 행, 최초 설정 전에는 빈 파일 |
 
 ## 코드 구조
 
-실행 흐름은 `Main → 시작 검사 → Console → Service → InventoryDatabase → EntityWriter`입니다.
+실행 흐름은 `Main → 시작 검사 → 최초 날짜 설정 → Console → Service → InventoryDatabase → EntityWriter`입니다.
 
 | 담당 | 클래스 |
 | --- | --- |
 | 파일 생성과 접근 확인 | `FileAccess` |
 | 파일 읽기와 시작 순서 | `StartupLoader` |
 | 파일의 필드 형식 검사 | `EntityParser` |
-| 파일의 값 범위·중복·연속성·참조·FIFO·용량 검사 | `FileIntegrityValidator` |
+| 파일의 값 범위·중복·연속성·참조·상태·날짜·용량 검사 | `FileIntegrityValidator` |
 | 사용자 입력과 화면 출력 | `Input`, `InputValidator`, `Console`, `ConsoleView` |
-| 상품 등록, 입고·판매, 조회 | `ProductService`, `StockService`, `QueryService` |
+| 상품 등록, 입고·판매, 조회 | `ProductService`, `StockService`, `DateService`, `QueryService` |
 | 공유 상태 조회와 저장 후 상태 교체 | `InventoryDatabase` |
 | 정렬과 UTF-8 파일 기록 | `EntityWriter` |
+
+## 2차 확장
+
+최초 실행 시 가상날짜(2000-01-01~2037-12-31)를 설정합니다. 메뉴 5는 종료, 6은 환불, 7은 날짜 변경입니다. 등록 시 유통기한 일수(0: 무기한)를, 입고 시 생산일을 입력합니다. 만료일 당일까지 판매·환불 가능하며 날짜 변경 시 만료된 재고를 폐기합니다. 유기한 상품은 임박 순 또는 물리코드 직접 지정으로 판매하고, 무기한 상품은 접미번호순으로 판매합니다. 최초 환불 후 재판매에는 70% 가격을 10원 단위로 내림(최저 10원)하여 적용합니다.
+
+기존 4필드/3필드 데이터는 시작 검사에서 거부합니다. 생산일을 임의로 채우는 자동 변환은 제공하지 않습니다. 실제 `data/`는 작업 중 변경하지 않았습니다.
+
+검증: `python scripts/review_phase2.py`와 `inventory.service.Phase2ServiceTest`를 실행합니다. 기존 `scripts/review_product_spec.py`는 1차 스키마 전용 검수 자료입니다. 요구사항 해석은 [2차 구현 결정](docs/phase2-decisions.md)을 참조합니다.

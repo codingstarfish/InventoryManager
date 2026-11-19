@@ -20,6 +20,7 @@ import java.io.IOException;
 
 
 public class Console {
+    private final inventory.service.DateService dateService;
     private final Input input;
     private final InputValidator validator;
     private final ProductService productService;
@@ -27,7 +28,7 @@ public class Console {
     private final QueryService queryService;
     private final ConsoleView view;
 
-    
+
     /**
      * 입력/검증/서비스/출력 객체 보관
      *
@@ -38,7 +39,8 @@ public class Console {
      * @param queryService 전체 재고와 단일 상품을 조회하는 서비스
      * @param view 프롬프트, 오류 안내, 처리 결과를 출력하는 객체
      */
-    public Console(Input input, InputValidator validator, ProductService productService, StockService stockService, QueryService queryService, ConsoleView view) {
+    public Console(Input input, InputValidator validator, ProductService productService, StockService stockService, QueryService queryService, inventory.service.DateService dateService, ConsoleView view) {
+        this.dateService=dateService;
         this.input = input;
         this.validator = validator;
         this.productService = productService;
@@ -52,11 +54,16 @@ public class Console {
      *
      * @return 정상 종료 또는 EOF이면 0, 파일 저장 실패이면 1인 종료 코드
      * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
-     * @throws IllegalStateException 검증된 주 메뉴 번호가 1~5가 아닌 경우
+     * @throws IllegalStateException 검증된 주 메뉴 번호가 1~7가 아닌 경우
      * @throws BusinessRuleException 입력 단계에서 재입력으로 처리할 수 없는 업무 오류가 전파된 경우
      */
     public int run() throws IOException {
         try {
+            while(dateService.currentDate().isEmpty()) {
+                view.prompt(Field.DATE);
+                try { dateService.initialize(validator.parseDate(input.readLine())); }
+                catch(UserInputException e) { view.error(e.code(),Map.of()); }
+            }
             while (true) {
                 view.mainMenu();
                 int menu;
@@ -71,6 +78,8 @@ public class Console {
                     case 2 -> receiveMenu();
                     case 3 -> saleMenu();
                     case 4 -> queryMenu();
+                    case 6 -> refundMenu();
+                    case 7 -> dateMenu();
                     case 5 -> {
                         view.normalExit();
                         return 0;
@@ -112,7 +121,9 @@ public class Console {
         if (price.isEmpty()) {
             return;
         }
-        view.registered(productService.register(name.get(), size.get(), price.get()));
+        var shelf=readValue(Field.SHELF_LIFE,validator::parseShelfLife);
+        if(shelf.isEmpty()) return;
+        view.registered(productService.register(name.get(), size.get(), price.get(),shelf.get()));
     }
 
     /**
@@ -134,8 +145,16 @@ public class Console {
         }
         StockSummary summary = selected.get();
         view.selected(summary);
-        readValue(Field.INBOUND_QUANTITY, raw -> stockService.receive(summary,
-                validator.parseQuantity(raw, Field.INBOUND_QUANTITY))).ifPresent(view::received);
+        var quantity=readValue(Field.INBOUND_QUANTITY,raw -> {
+            int n=validator.parseQuantity(raw,Field.INBOUND_QUANTITY);
+            stockService.validateReceiptQuantity(summary,n); return n;
+        });
+        if(quantity.isEmpty()) return;
+        readValue(Field.PRODUCED_ON,raw -> {
+            var produced=validator.parseDate(raw);
+            var result=stockService.receive(summary,quantity.get(),produced);
+            view.received(result); view.line("생산일자: "+produced); return result;
+        });
     }
 
     /**
@@ -157,6 +176,17 @@ public class Console {
         }
         StockSummary summary = selected.get();
         view.selected(summary);
+        if(summary.item().shelfLifeDays()>0) {
+            var mode=readValue(Field.SALE_MODE,validator::parseQueryMode);
+            if(mode.isEmpty()) return;
+            if(mode.get()==2) {
+                var candidates=stockService.saleCandidates(summary.item().code());
+                if(candidates.isEmpty()) { view.line("판매 가능 재고가 없습니다."); return; }
+                candidates.forEach(row->view.candidate(summary.item(),row));
+                readValue(Field.PHYSICAL_KEY,raw->stockService.sellOne(summary,validator.parsePhysicalKey(raw))).ifPresent(view::sold);
+                return;
+            }
+        }
         readValue(Field.SALE_QUANTITY, raw -> stockService.sell(summary,
                 validator.parseQuantity(raw, Field.SALE_QUANTITY))).ifPresent(view::sold);
     }
@@ -167,6 +197,14 @@ public class Console {
      * @throws IOException 사용자 입력을 읽는 중 입출력 오류가 발생한 경우
      * @throws EndOfInputException 조회 방식·상품코드 입력 또는 재입력 확인 중 EOF를 만난 경우
      */
+    private void refundMenu() throws IOException {
+        if(!productService.hasProducts()) { view.line("등록된 상품이 없어 환불할 수 없습니다."); return; }
+        readValue(Field.PHYSICAL_KEY,raw->stockService.refund(validator.parsePhysicalKey(raw))).ifPresent(view::refunded);
+    }
+    private void dateMenu() throws IOException {
+        view.line("현재 가상날짜: "+dateService.currentDate().orElseThrow());
+        readValue(Field.DATE,raw->dateService.advance(validator.parseDate(raw))).ifPresent(view::dateChanged);
+    }
     private void queryMenu() throws IOException {
         Optional<Integer> mode = readValue(Field.QUERY_MODE, validator::parseQueryMode);
         if (mode.isEmpty()) {
@@ -214,11 +252,11 @@ public class Console {
         while (true) {
             view.prompt(field);
             try {
-                return Optional.of(parse.apply(input.readLine()));
+                return Optional.of(parse.apply(validator.normalizeSpaces(input.readLine())));
             } catch (UserInputException e) {
                 view.error(e.code(), Map.of());
             } catch (BusinessRuleException e) {
-                boolean retryable = field == Field.INBOUND_QUANTITY
+                boolean retryable = field == Field.DATE || field == Field.PRODUCED_ON || field == Field.PHYSICAL_KEY || field == Field.INBOUND_QUANTITY
                         && (e.code() == ErrorCode.SUFFIX_SHORTAGE || e.code() == ErrorCode.CAPACITY_SHORTAGE)
                         || field == Field.SALE_QUANTITY && e.code() == ErrorCode.STOCK_SHORTAGE;
                 if (!retryable) {

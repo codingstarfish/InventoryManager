@@ -41,8 +41,8 @@ public class ProductService {
      * @return 새 논리코드가 부여되어 등록된 상품
      * @throws inventory.exception.SaveFailureException 등록한 상품을 논리 파일에 저장하지 못한 경우
      */
-    public LogicalItem register(String name, int size, int price) {
-        LogicalItem item = new LogicalItem(DomainRules.formatLogicalCode(db.size() + 1), name, size, price);
+    public LogicalItem register(String name, int size, int price, int shelfLifeDays) {
+        LogicalItem item = new LogicalItem(DomainRules.formatLogicalCode(db.size() + 1), name, size, price, shelfLifeDays);
         db.addItem(item);
         db.saveLogical();
         return item;

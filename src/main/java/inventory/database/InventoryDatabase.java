@@ -17,6 +17,10 @@ public class InventoryDatabase {
     private final Map<String, LogicalItem> logicalItems = new HashMap<>();
     private final Map<String, List<PhysicalItem>> physicalByCode = new HashMap<>();
     private final EntityWriter writer;
+    private java.util.Optional<java.time.LocalDate> virtualDate = java.util.Optional.empty();
+    public java.util.Optional<java.time.LocalDate> currentDate() { return virtualDate; }
+    public void loadDate(java.util.Optional<java.time.LocalDate> day) { virtualDate=day; }
+    public void saveDate(java.time.LocalDate day) { writer.writeDate(day); virtualDate=java.util.Optional.of(day); }
 
     /**
      * @param writer 변경된 상품·낱개 데이터를 파일에 저장하는 객체
@@ -79,7 +83,7 @@ public class InventoryDatabase {
     }
 
     /**
-     * 전체 행 수는 누적 입고, sold가 true인 행 수는 누적 판매
+     * 전체 행 수는 누적 입고, 상태 1은 판매, 상태 2는 폐기
      *
      * @param code 수량을 집계할 상품의 논리코드
      * @return 상품 정보와 누적 입고·누적 판매 수량을 담은 요약
@@ -94,7 +98,7 @@ public class InventoryDatabase {
                 sold++;
             }
         }
-        return new StockSummary(item, rows.size(), sold);
+        return new StockSummary(item, rows.size(), sold, (int)rows.stream().filter(r -> r.state()==inventory.entity.ItemState.DISCARDED).count());
     }
 
     /**
@@ -106,7 +110,7 @@ public class InventoryDatabase {
         long used = 0;
         for (LogicalItem item : logicalItems.values()) {
             for (PhysicalItem row : findPhysicalItems(item.code())) {
-                if (!row.sold()) {
+                if (row.state()==inventory.entity.ItemState.IN_STOCK) {
                     used += item.size();
                 }
             }

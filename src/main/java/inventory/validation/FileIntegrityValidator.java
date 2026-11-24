@@ -3,6 +3,7 @@ package inventory.validation;
 import java.util.Comparator;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.HashMap;
@@ -28,13 +29,14 @@ public class FileIntegrityValidator {
      *
      * @param logicalRows  문법 검사를 통과한 논리 파일의 상품 행 목록
      * @param physicalRows 문법 검사를 통과한 물리 파일의 낱개 상품 행 목록
+     * @param rawVirtualDate 날짜 파일이 비었으면 빈 값, 아니면 문법 검사를 통과한 날짜 원문
      * @throws StartupDataException 상품 크기가 1000을 초과하거나 가격의 범위·10원 단위가 잘못된 경우,
      *                              논리코드가 P00000이거나 중복·누락된 경우, 접미번호가 000이거나 중복·누락된 경우,
      *                              물리 파일이 미등록 상품을 참조하거나 상태·날짜 일관성을 어긴 경우,
      *                              미판매 재고의 총용량이 1000000을 초과한 경우
      */
-    public void validate(List<RawLogicalRow> logicalRows, List<RawPhysicalRow> physicalRows, String dateText) {
-        var date = dateText == null ? null : parseStoredDate(dateText, DataPaths.DATE_FILE);
+    public void validate(List<RawLogicalRow> logicalRows, List<RawPhysicalRow> physicalRows, Optional<String> rawVirtualDate) {
+        var date = rawVirtualDate.map(text -> parseStoredDate(text, DataPaths.DATE_FILE)).orElse(null);
         Map<String, RawLogicalRow> logical = new TreeMap<>();
         for (RawLogicalRow row : logicalRows) {
             String file = DataPaths.LOGICAL_FILE;

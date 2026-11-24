@@ -4,6 +4,7 @@ import inventory.literal.InputPatterns;
 import inventory.literal.DataPaths;
 
 import java.util.List;
+import java.util.Optional;
 
 import inventory.exception.StartupDataException;
 
@@ -14,13 +15,13 @@ public class EntityParser {
     }
 
     /**
-     * 상품명, 논리코드, 크기, 가격 순서로 문법 검사
+     * 상품명, 논리코드, 크기, 가격, 유통기한 일수 순서로 문법 검사
      * P00000, 크기 1001, 가격 1 같은 값은 의미 검사에서 걸러짐
      * 문법이 틀리면 StartupDataException
      *
      * @param line 논리 파일에서 읽은 개행 문자를 제외한 한 행
-     * @return 문법 검사를 통과한 상품명·논리코드·크기·가격(원) 데이터
-     * @throws StartupDataException 빈 행이거나 필드 수·상품명·논리코드·크기·가격 형식이 잘못된 경우
+     * @return 문법 검사를 통과한 상품명·논리코드·크기·가격(원)·유통기한 일수 데이터
+     * @throws StartupDataException 빈 행이거나 필드 수 또는 필드 형식이 잘못된 경우
      */
     public RawLogicalRow parseLogicalSyntax(String line) {
         String file = DataPaths.LOGICAL_FILE;
@@ -46,12 +47,12 @@ public class EntityParser {
     }
 
     /**
-     * 논리코드, 접미번호, 판매여부 순서로 문법 검사
-     * 상태는 0/1/2로 변환. 날짜는 원문으로 보존하고 의미 검사에서 확인
+     * 논리코드, 접미번호, 상태, 생산일, 판매일, 환불이력 순서로 문법 검사
+     * 상태 숫자는 ItemState로 변환. 날짜는 원문으로 보존하고 의미 검사에서 확인
      *
      * @param line 물리 파일에서 읽은 개행 문자를 제외한 한 행
-     * @return 문법 검사를 통과한 논리코드·접미번호·판매여부 데이터
-     * @throws StartupDataException 빈 행이거나 필드 수·논리코드·접미번호·판매여부 형식이 잘못된 경우
+     * @return 문법 검사를 통과한 낱개 상품 행
+     * @throws StartupDataException 빈 행이거나 필드 수 또는 필드 형식이 잘못된 경우
      */
     public RawPhysicalRow parsePhysicalSyntax(String line) {
         String file = DataPaths.PHYSICAL_FILE;
@@ -75,6 +76,18 @@ public class EntityParser {
     }
 
     /**
+     * @param lines 날짜 파일에서 읽은 행 목록
+     * @return 날짜 파일이 비었으면 빈 값, 날짜 행이 있으면 문법 검사를 통과한 원문
+     * @throws StartupDataException 여러 행이거나 날짜 형식이 잘못된 경우
+     */
+    public Optional<String> parseDateSyntax(List<String> lines) {
+        if (lines.size() > 1) throw syntaxError(DataPaths.DATE_FILE, "날짜 파일은 최대 한 행이어야 합니다.");
+        if (lines.isEmpty()) return Optional.empty();
+        checkPattern(lines.get(0), "[0-9]{4}-[0-9]{2}-[0-9]{2}", DataPaths.DATE_FILE, "가상날짜는 YYYY-MM-DD 형식이어야 합니다.");
+        return Optional.of(lines.get(0));
+    }
+
+    /**
      * 공백 제거 없이 필드 전체를 검사. 정규식과 안 맞으면 파일 오류
      *
      * @param value   검사할 필드의 원문 값
@@ -83,13 +96,6 @@ public class EntityParser {
      * @param reason  정규식 불일치 시 전달할 오류 설명
      * @throws StartupDataException 필드 전체가 지정한 정규식과 일치하지 않는 경우
      */
-    public String parseDateSyntax(List<String> lines) {
-        if (lines.size() > 1) throw syntaxError(DataPaths.DATE_FILE, "날짜 파일은 최대 한 행이어야 합니다.");
-        if (lines.isEmpty()) return null;
-        checkPattern(lines.get(0), "[0-9]{4}-[0-9]{2}-[0-9]{2}", DataPaths.DATE_FILE, "가상날짜는 YYYY-MM-DD 형식이어야 합니다.");
-        return lines.get(0);
-    }
-
     private void checkPattern(String value, String pattern, String file, String reason) {
         if (!value.matches(pattern)) {
             throw syntaxError(file, reason);

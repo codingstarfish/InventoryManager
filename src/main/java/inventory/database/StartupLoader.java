@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.Comparator;
 
 import inventory.entity.LogicalItem;
@@ -62,9 +63,9 @@ public class StartupLoader {
         for (String line : physicalLines) {
             physicalRows.add(parser.parsePhysicalSyntax(line));
         }
-        String dateText = parser.parseDateSyntax(readStrictLines(access.datePath()));
+        Optional<String> dateText = parser.parseDateSyntax(readStrictLines(access.datePath()));
         validator.validate(logicalRows, physicalRows, dateText);
-        db.loadDate(java.util.Optional.ofNullable(dateText).map(java.time.LocalDate::parse));
+        db.loadDate(dateText.map(java.time.LocalDate::parse));
         for (RawLogicalRow row : logicalRows) {
             db.addItem(new LogicalItem(row.code(), row.name(), row.size(), row.price(), row.shelfLifeDays()));
         }
